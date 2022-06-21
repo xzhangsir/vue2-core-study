@@ -1,11 +1,15 @@
+const effectStack = []; //栈
 let activeEffect;
 export function effect(fn) {
   const effectFn = () => {
     try {
       activeEffect = effectFn;
+      effectStack.push(activeEffect);
       return fn();
     } finally {
-      //todo
+      // activeEffect = null
+      effectStack.pop();
+      activeEffect = effectStack[effectStack.length - 1];
     }
   };
   return effectFn();
@@ -23,6 +27,7 @@ export function track(target, key) {
     //第一次肯定不存在
     depsMap.set(key, (deps = new Set()));
   }
+
   deps.add(activeEffect);
 }
 export function trigger(target, key) {
@@ -36,6 +41,7 @@ export function trigger(target, key) {
     //说明没有被代理上
     return;
   }
+
   deps.forEach((effectFn) => {
     effectFn();
   });
