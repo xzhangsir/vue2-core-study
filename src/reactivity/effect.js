@@ -1,6 +1,6 @@
 const effectStack = []; //栈
 let activeEffect;
-export function effect(fn) {
+export function effect(fn, options = {}) {
   const effectFn = () => {
     try {
       activeEffect = effectFn;
@@ -12,7 +12,11 @@ export function effect(fn) {
       activeEffect = effectStack[effectStack.length - 1];
     }
   };
-  return effectFn();
+  if (!options.lazy) {
+    return effectFn();
+  }
+  effectFn.scheduler = options.scheduler;
+  return effectFn;
 }
 const targetMap = new WeakMap();
 export function track(target, key) {
@@ -43,6 +47,10 @@ export function trigger(target, key) {
   }
 
   deps.forEach((effectFn) => {
-    effectFn();
+    if (effectFn.scheduler) {
+      effectFn.scheduler(effectFn);
+    } else {
+      effectFn();
+    }
   });
 }
