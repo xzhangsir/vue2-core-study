@@ -1,4 +1,6 @@
 import babel from 'rollup-plugin-babel'
+// npm install @rollup/plugin-node-resolve  //引用文件的时候 就没有必要写indedx了
+import resolve from '@rollup/plugin-node-resolve'
 
 export default {
   input: './src/index.js', //入口
@@ -11,6 +13,7 @@ export default {
   plugins: [
     babel({
       exclude: 'node_modules/**' //排除node_models下所有文件
-    })
+    }),
+    resolve()
   ]
 }

@@ -4,6 +4,13 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  // 对模板进行编译
+  function compileToFunction(template) {
+    // 1 template  转 ast语法树
+    // 2 生成render （返回的就是 虚拟dom）
+    console.log(template);
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -194,6 +201,38 @@
       //初始化状态
 
       initState(vm);
+
+      if (options.el) {
+        vm.$mount(options.el); //实现数据的挂载
+      }
+    };
+
+    Vue.prototype.$mount = function (el) {
+      var vm = this;
+      el = document.querySelector(el);
+      var ops = vm.$options;
+
+      if (!ops.render) {
+        //先找render 没有render 找template
+        var template;
+
+        if (!ops.template && el) {
+          //没有template 用外部的html
+          template = el.outerHTML;
+        } else {
+          if (el) {
+            template = ops.template;
+          }
+        }
+
+        if (template) {
+          // 对模板进行编译
+          var render = compileToFunction(template);
+          ops.render = render;
+        }
+      }
+
+      ops.render; //最终可以获取到render方法
     };
   }
 
