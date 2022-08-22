@@ -39,13 +39,68 @@
     return Constructor;
   }
 
+  // 对数组中的部分方法进行重写
+  var oldArrayProto = Array.prototype; //获取数组的原型
+
+  var newArrayProto = Object.create(oldArrayProto); // 找到所有的变异方法  即可以修改原数组的方法
+
+  var methods = ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'];
+  methods.forEach(function (method) {
+    newArrayProto[method] = function () {
+      var _oldArrayProto$method;
+
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      // console.log(method)
+      // 内部调用原来的方法  函数的劫持  切片编程
+      var result = (_oldArrayProto$method = oldArrayProto[method]).call.apply(_oldArrayProto$method, [this].concat(args)); // 对数组中新增的数据 进行劫持
+
+
+      var inserted; //新增的内容
+
+      var ob = this.__ob__;
+
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+
+        case 'splice':
+          inserted = args.slice(2);
+          break;
+      }
+
+      if (inserted) {
+        // 对新增的内容进行观测
+        ob.observeArray(inserted);
+      }
+
+      return result;
+    };
+  });
+
   var Observer = /*#__PURE__*/function () {
     function Observer(data) {
       _classCallCheck(this, Observer);
 
-      // Object.defineProperty 只能劫持已经存在的属性
-      // vue2中加了 $set  $delete api
-      this.walk(data);
+      Object.defineProperty(data, '__ob__', {
+        value: this,
+        enumerable: false //不能被枚举
+
+      }); // data.__ob__ = this //副作用 给数据加了一个标识上有__ob__ 则说明这个属性被观测过
+
+      if (Array.isArray(data)) {
+        // 重写部分数组中的方法
+        data.__proto__ = newArrayProto;
+        this.observeArray(data);
+      } else {
+        // Object.defineProperty 只能劫持已经存在的属性
+        // vue2中加了 $set  $delete api
+        this.walk(data);
+      }
     }
 
     _createClass(Observer, [{
@@ -54,6 +109,13 @@
         //循环对象对属性进行依次的劫持
         Object.keys(data).forEach(function (key) {
           return defineReactive(data, key, data[key]);
+        });
+      }
+    }, {
+      key: "observeArray",
+      value: function observeArray(data) {
+        data.forEach(function (item) {
+          return observe(item);
         });
       }
     }]);
@@ -66,12 +128,14 @@
 
     Object.defineProperty(target, key, {
       get: function get() {
-        console.log('来取值了');
+        console.log('来取值了', key);
         return value;
       },
       set: function set(newValue) {
-        console.log('设置值了');
+        console.log('设置值了', key);
         if (newValue === value) return;
+        observe(newValue); //如果设置的值是对象 再次代理
+
         value = newValue;
       }
     });
@@ -79,6 +143,11 @@
   function observe(data) {
     if (_typeof(data) !== 'object' || data == null) {
       return; //只对对象进行劫持
+    }
+
+    if (data.__ob__ instanceof Observer) {
+      // 说明这个对象被代理过了
+      return data.__ob__;
     } // 如果对象被劫持过 就不需要再被劫持了
 
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh_CN">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -14,15 +14,21 @@
         return {
           name:'zx',
           age:18,
-          a:{
-            b:{
-              c:1
-            }
-          }
+          address:{
+            city:"zhongguo"
+          },
+          hobby:["eat","play",{a:1}]
         }
       }
     })
-    vm.name = "xm"  //vm._data.name
+    // vm.name = "xm"  //vm._data.name
+    vm.address = {
+      pro:"shanxi"
+    }
+    // vm.hobby[2].a
+    vm.hobby.push({
+      b:2
+    })
     console.log(vm);
   </script>
 </body>
