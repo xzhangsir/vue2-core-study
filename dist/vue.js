@@ -5,9 +5,154 @@
 })(this, (function () { 'use strict';
 
   // 对模板进行编译
+  // const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
+  var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
+  var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")"); // 开始标签
+
+  var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 结束标签
+
+  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>")); // 属性  第一个分组是属性的key  value在分组 3/4/5中
+
+  var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // <br/>
+
+  var startTagClose = /^\s*(\/?)>/; // {{}}
+
+  function parseHTML(html) {
+    // 最终需要转化为一颗抽象语法树
+    var ELEMENT_TYPE = 1;
+    var TEXT_TYPE = 3;
+    var stack = [];
+    var currentParent; //永远指向栈中的最后一个
+
+    var root;
+
+    function createASTElement(tag, attrs) {
+      return {
+        tag: tag,
+        type: ELEMENT_TYPE,
+        children: [],
+        attrs: attrs,
+        parent: null
+      };
+    }
+
+    function start(tag, attrs) {
+      // 创造一个ast节点
+      var node = createASTElement(tag, attrs); // 如果root为空 那这个节点就是当前树的根节点
+
+      if (!root) {
+        root = node;
+      }
+
+      if (currentParent) {
+        // 赋予parent属性
+        node.parent = currentParent; // 还要让父亲记住自己
+
+        currentParent.children.push(node);
+      }
+
+      stack.push(node);
+      currentParent = node; // console.log(tag, attrs)
+    }
+
+    function chars(text) {
+      text = text.replace(/\s/g, ''); // 文本直接放到当前指向的节点
+
+      text && currentParent.children.push({
+        type: TEXT_TYPE,
+        text: text,
+        parent: currentParent
+      }); // console.log(text)
+    }
+
+    function end(tag) {
+      stack.pop(); //弹出最后一个 校验标签是否合法
+
+      currentParent = stack[stack.length - 1]; // console.log(tag)
+    }
+
+    function advance(n) {
+      html = html.substring(n);
+    }
+
+    function parseStartTag() {
+      var start = html.match(startTagOpen); // console.log(start)
+
+      if (start) {
+        var match = {
+          tagName: start[1],
+          //标签名
+          attrs: []
+        };
+        advance(start[0].length); // console.log(match)
+        // console.log(html)
+        // 如果不是开始标签的结束 就一直匹配下去
+
+        var attr, _end;
+
+        while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+          advance(attr[0].length);
+          match.attrs.push({
+            name: attr[1],
+            value: attr[3] || attr[4] || attr[5]
+          });
+        }
+
+        if (_end) {
+          advance(_end[0].length);
+        } // console.log(attr)
+        // console.log(html)
+        // console.log(match)
+
+
+        return match;
+      }
+
+      return false; //不是开始标签
+    }
+
+    while (html) {
+      //<div>hello</div>
+      //如果indexOf中的索引是0 则说明是标签
+      //如果大于0 则说明是文本结束的位置
+      var textEnd = html.indexOf('<');
+
+      if (textEnd == 0) {
+        var startTagMatch = parseStartTag(); //开始标签的匹配结果
+
+        if (startTagMatch) {
+          start(startTagMatch.tagName, startTagMatch.attrs); // console.log(html)
+
+          continue;
+        }
+
+        var endTagMatch = html.match(endTag);
+
+        if (endTagMatch) {
+          advance(endTagMatch[0].length);
+          end(endTagMatch[1]);
+          continue;
+        }
+      }
+
+      if (textEnd > 0) {
+        // 文本内容
+        var text = html.substring(0, textEnd);
+
+        if (text) {
+          chars(text);
+          advance(text.length);
+        }
+      }
+    }
+
+    console.log(root);
+  }
+
   function compileToFunction(template) {
     // 1 template  转 ast语法树
-    // 2 生成render （返回的就是 虚拟dom）
+    parseHTML(template); // 2 生成render （返回的就是 虚拟dom）
+
     console.log(template);
   }
 
