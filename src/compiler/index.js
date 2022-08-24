@@ -1,143 +1,78 @@
-// 对模板进行编译
-// const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
-const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z]*`
-const qnameCapture = `((?:${ncname}\\:)?${ncname})`
-// 开始标签
-const startTagOpen = new RegExp(`^<${qnameCapture}`)
-// 结束标签
-const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
-// 属性  第一个分组是属性的key  value在分组 3/4/5中
-const attribute =
-  /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
-// <br/>
-const startTagClose = /^\s*(\/?)>/
-// {{}}
+import { parseHTML } from './parse'
+
+function genProps(attrs) {
+  let str = ''
+  for (let i = 0; i < attrs.length; i++) {
+    let attr = attrs[i]
+    if (attr.name === 'style') {
+      let obj = {}
+      attr.value.split(';').forEach((item) => {
+        let [key, value] = item.split(':')
+        obj[key] = value
+      })
+      attr.value = obj
+    }
+    str += `${attr.name}:${JSON.stringify(attr.value)},`
+  }
+  return `{${str.slice(0, -1)}}`
+}
+
 const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
 
-function parseHTML(html) {
-  // 最终需要转化为一颗抽象语法树
-  const ELEMENT_TYPE = 1
-  const TEXT_TYPE = 3
-  const stack = []
-  let currentParent //永远指向栈中的最后一个
-  let root
+function gen(node) {
+  // 如果子节点是元素
+  if (node.type === 1) {
+    return codegen(node)
+  } else {
+    let text = node.text
+    if (!defaultTagRE.test(text)) {
+      // 纯文本
+      return `_v(${JSON.stringify(text)})`
+    } else {
+      //_v('name'+_s(name))
+      // console.log(text, defaultTagRE.exec(text))
+      let tokens = []
+      let match
+      defaultTagRE.lastIndex = 0
+      let lastIndex = 0
+      while ((match = defaultTagRE.exec(text))) {
+        // console.log(match, '----')
+        let index = match.index
+        if (index > lastIndex) {
+          tokens.push(JSON.stringify(text.slice(lastIndex, index)))
+        }
+        tokens.push(`_s(${match[1].trim()})`)
 
-  function createASTElement(tag, attrs) {
-    return {
-      tag,
-      type: ELEMENT_TYPE,
-      children: [],
-      attrs,
-      parent: null
+        lastIndex = index + match[0].length
+      }
+      if (lastIndex < text.length) {
+        tokens.push(JSON.stringify(text.slice(lastIndex)))
+      }
+      return `_v(${tokens.join('+')})`
     }
   }
+}
 
-  function start(tag, attrs) {
-    // 创造一个ast节点
-    let node = createASTElement(tag, attrs)
-    // 如果root为空 那这个节点就是当前树的根节点
-    if (!root) {
-      root = node
-    }
-    if (currentParent) {
-      // 赋予parent属性
-      node.parent = currentParent
-      // 还要让父亲记住自己
-      currentParent.children.push(node)
-    }
-    stack.push(node)
-    currentParent = node
+function genChildren(children) {
+  if (children) {
+    return children.map((child) => gen(child)).join(',')
+  }
+}
 
-    // console.log(tag, attrs)
-  }
-  function chars(text) {
-    text = text.replace(/\s/g, '')
-    // 文本直接放到当前指向的节点
-    text &&
-      currentParent.children.push({
-        type: TEXT_TYPE,
-        text,
-        parent: currentParent
-      })
-    // console.log(text)
-  }
-  function end(tag) {
-    let node = stack.pop() //弹出最后一个 校验标签是否合法
-    currentParent = stack[stack.length - 1]
-    // console.log(tag)
-  }
-  function advance(n) {
-    html = html.substring(n)
-  }
-  function parseStartTag() {
-    const start = html.match(startTagOpen)
-    // console.log(start)
-    if (start) {
-      const match = {
-        tagName: start[1], //标签名
-        attrs: []
-      }
+function codegen(ast) {
+  let children = genChildren(ast.children)
+  let code = `_c('${ast.tag}',${
+    ast.attrs.length > 0 ? genProps(ast.attrs) : 'null'
+  }${ast.children.length ? `,${children}` : ''})`
 
-      advance(start[0].length)
-      // console.log(match)
-      // console.log(html)
-      // 如果不是开始标签的结束 就一直匹配下去
-      let attr, end
-      while (
-        !(end = html.match(startTagClose)) &&
-        (attr = html.match(attribute))
-      ) {
-        advance(attr[0].length)
-        match.attrs.push({
-          name: attr[1],
-          value: attr[3] || attr[4] || attr[5]
-        })
-      }
-      if (end) {
-        advance(end[0].length)
-      }
-      // console.log(attr)
-      // console.log(html)
-      // console.log(match)
-      return match
-    }
-
-    return false //不是开始标签
-  }
-  while (html) {
-    //<div>hello</div>
-    //如果indexOf中的索引是0 则说明是标签
-    //如果大于0 则说明是文本结束的位置
-    let textEnd = html.indexOf('<')
-    if (textEnd == 0) {
-      const startTagMatch = parseStartTag() //开始标签的匹配结果
-      if (startTagMatch) {
-        start(startTagMatch.tagName, startTagMatch.attrs)
-        // console.log(html)
-        continue
-      }
-      let endTagMatch = html.match(endTag)
-      if (endTagMatch) {
-        advance(endTagMatch[0].length)
-        end(endTagMatch[1])
-        continue
-      }
-    }
-    if (textEnd > 0) {
-      // 文本内容
-      let text = html.substring(0, textEnd)
-      if (text) {
-        chars(text)
-        advance(text.length)
-      }
-    }
-  }
-  console.log(root)
+  return code
 }
 
 export function compileToFunction(template) {
   // 1 template  转 ast语法树
   let ast = parseHTML(template)
+  console.log(ast)
   // 2 生成render （返回的就是 虚拟dom）
-  console.log(template)
+  // console.log(template)
+  console.log(codegen(ast))
 }
