@@ -69,10 +69,29 @@ function codegen(ast) {
 }
 
 export function compileToFunction(template) {
+  // console.log(template)
   // 1 template  转 ast语法树
   let ast = parseHTML(template)
-  console.log(ast)
+  // console.log(ast)
   // 2 生成render （返回的就是 虚拟dom）
-  // console.log(template)
-  console.log(codegen(ast))
+  let code = codegen(ast)
+  // console.log(code)
+
+  // 模板引擎的实现原理 都是  with  + new Function
+  code = `with(this){return ${code}}`
+  let render = new Function(code)
+  // console.log(render.toString())
+  return render
+
+  /*   function anonymous() {
+    with (this) {
+      return _c(
+        'div',
+        { id: 'app', style: { color: 'red' } },
+        _c('div', { style: { color: 'green' } }, _v('name:' + _s(name))),
+        _c('i', null, _v('链接')),
+        _c('div', null, _v('age:' + _s(age)))
+      )
+    }
+  } */
 }

@@ -325,12 +325,47 @@
   }
 
   function compileToFunction(template) {
-    // 1 template  转 ast语法树
-    var ast = parseHTML(template);
-    console.log(ast); // 2 生成render （返回的就是 虚拟dom）
     // console.log(template)
+    // 1 template  转 ast语法树
+    var ast = parseHTML(template); // console.log(ast)
+    // 2 生成render （返回的就是 虚拟dom）
 
-    console.log(codegen(ast));
+    var code = codegen(ast); // console.log(code)
+    // 模板引擎的实现原理 都是  with  + new Function
+
+    code = "with(this){return ".concat(code, "}");
+    var render = new Function(code); // console.log(render.toString())
+
+    return render;
+    /*   function anonymous() {
+      with (this) {
+        return _c(
+          'div',
+          { id: 'app', style: { color: 'red' } },
+          _c('div', { style: { color: 'green' } }, _v('name:' + _s(name))),
+          _c('i', null, _v('链接')),
+          _c('div', null, _v('age:' + _s(age)))
+        )
+      }
+    } */
+  }
+
+  function initLifeCycle(Vue) {
+    Vue.prototype._update = function () {
+      console.log('update');
+    };
+
+    Vue.prototype._render = function () {
+      console.log('render');
+    };
+  }
+  function mountComponent(vm, el) {
+    // 1 调用render方法 产生虚拟节点
+    vm._render(); //vm.$options.render()  返回的是虚拟节点
+    // 2 根据虚拟dom 产生真实dom
+    // vm._update() //虚拟节点转真实节点
+    // 3 插入到el元素中
+
   }
 
   // 对数组中的部分方法进行重写
@@ -519,7 +554,8 @@
         }
       }
 
-      ops.render; //最终可以获取到render方法
+      mountComponent(vm); //组件的挂载
+      // console.log(ops.render) //最终可以获取到render方法
     };
   }
 
@@ -528,6 +564,11 @@
   }
 
   initMixin(Vue);
+  initLifeCycle(Vue);
+  // 将模板转化为ast语法树
+  // 将ast语法树转为render函数
+  // 每次数据更新只执行render函数(无须再次执行ast转化的过程)
+  // 根据生成的虚拟节点创造真实DOM
 
   return Vue;
 
