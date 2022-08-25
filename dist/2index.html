@@ -28,9 +28,14 @@
           hobby:["eat","play",{a:1}]
         }
       },
-      el:"#app", //我们要将数据解析到 el元素上
+      // el:"#app", //我们要将数据解析到 el元素上
       // template:"<div>{{name}}</div>"
     })
+    vm.$mount("#app")
+  /*   setTimeout(()=>{
+      vm.name = "xm"
+      vm._update(vm._render())  //手动更新
+    },2000) */
   </script>
 </body>
 </html>
