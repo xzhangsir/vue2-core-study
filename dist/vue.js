@@ -350,6 +350,99 @@
     } */
   }
 
+  var id$1 = 0;
+
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id$1++; // 属性的dep要收集watcher
+
+      this.subs = []; //这里存放这当前属性对应的watcher有哪些
+    }
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        /* /这样同样的属性 会重复收集watcher
+         this.subs.push(Dep.target)
+        console.log(this.subs) */
+        Dep.target.addDep(this); //(Dep.target就是当前的watcher)让watcher记住dep
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  Dep.target = null;
+
+  var id = 0; // watcher 是观察者
+  // dep 是被观察者
+  // dep 变化了会通知观察者watcher更新
+
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, fn, options) {
+      _classCallCheck(this, Watcher);
+
+      this.id = id++;
+      this.renderWatcher = options; //是一个渲染watcher
+
+      this.getter = fn; //getter意味着调用这个函数会触发取值操作
+
+      this.deps = []; //视图记录属性
+
+      this.depsId = new Set();
+      this.get(); //先初始化一次
+    }
+
+    _createClass(Watcher, [{
+      key: "addDep",
+      value: function addDep(dep) {
+        // 一个组件有多个属性 重复的属性 只记录一次
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.deps.push(dep); //watcher 记住了 dep
+
+          this.depsId.add(id);
+          dep.addSub(this); //让dep记住watcher
+        }
+      }
+    }, {
+      key: "get",
+      value: function get() {
+        //当我们渲染watcher的时候 我们会把当前的渲染watcher放到Dep.target上
+        Dep.target = this;
+        this.getter(); //会去vm上取值
+
+        Dep.target = null;
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        console.log('触发watcher更新了');
+        this.get(); //重新渲染
+      }
+    }]);
+
+    return Watcher;
+  }();
+  // 一个视图中 会有多个属性 等同于 多个dep对应一个watcher
+  // 同样一个属性可以对应多个视图  即 一个dep对应多个watcher
+  // dep和watcher  是多对多的关系
+
   // h() _c()
   function createElementVNode(vm, tag, data) {
     data = data || {};
@@ -467,15 +560,20 @@
     };
   }
   function mountComponent(vm, el) {
-    vm.$el = el; // 1 调用render方法 产生虚拟节点
-
-    var VNode = vm._render(); //vm.$options.render()  返回的是虚拟节点
+    vm.$el = el;
+    /*   // 1 调用render方法 产生虚拟节点
+    let VNode = vm._render() //vm.$options.render()  返回的是虚拟节点
     // 2 根据虚拟dom 产生真实dom
+    vm._update(VNode) //虚拟节点转真实节点
+    // 3 插入到el元素中 */
+
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    }; // true 标识是一个渲染watcher
 
 
-    vm._update(VNode); //虚拟节点转真实节点
-    // 3 插入到el元素中
-
+    var watcher = new Watcher(vm, updateComponent, true);
+    console.log(watcher);
   }
 
   // 对数组中的部分方法进行重写
@@ -565,8 +663,14 @@
   function defineReactive(target, key, value) {
     observe(value); //如果value是对象 再次递归劫持 深度劫持
 
+    var dep = new Dep(); //每个属性都有一个dep与之对应
+
     Object.defineProperty(target, key, {
       get: function get() {
+        if (Dep.target) {
+          dep.depend(); //让这个属性的收集器 记住这个watcher
+        }
+
         console.log('来取值了', key);
         return value;
       },
@@ -576,6 +680,7 @@
         observe(newValue); //如果设置的值是对象 再次代理
 
         value = newValue;
+        dep.notify(); //通知watcher更新
       }
     });
   }

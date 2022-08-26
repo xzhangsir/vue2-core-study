@@ -1,4 +1,5 @@
 import { newArrayProto } from './array'
+import Dep from './dep'
 
 class Observer {
   constructor(data) {
@@ -28,8 +29,12 @@ class Observer {
 
 export function defineReactive(target, key, value) {
   observe(value) //如果value是对象 再次递归劫持 深度劫持
+  let dep = new Dep() //每个属性都有一个dep与之对应
   Object.defineProperty(target, key, {
     get() {
+      if (Dep.target) {
+        dep.depend() //让这个属性的收集器 记住这个watcher
+      }
       console.log('来取值了', key)
       return value
     },
@@ -38,6 +43,7 @@ export function defineReactive(target, key, value) {
       if (newValue === value) return
       observe(newValue) //如果设置的值是对象 再次代理
       value = newValue
+      dep.notify() //通知watcher更新
     }
   })
 }

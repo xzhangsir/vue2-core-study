@@ -12,7 +12,7 @@
     <div style = "color:green">
       name:{{name}} 
     </div>
-    <i>链接</i>
+    <i>链接{{name}} </i>
     <div>age:{{age}}</div>
   </div>
   <script src = "vue.js"></script>
@@ -32,10 +32,12 @@
       // template:"<div>{{name}}</div>"
     })
     vm.$mount("#app")
-  /*   setTimeout(()=>{
+   setTimeout(()=>{
       vm.name = "xm"
-      vm._update(vm._render())  //手动更新
-    },2000) */
+      // vm.age = "16"
+      vm.address = "ok"  //页面中未使用 就不会收集这个依赖
+      // vm._update(vm._render())  //手动更新
+    },2000) 
   </script>
 </body>
 </html>
