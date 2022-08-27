@@ -32,12 +32,37 @@
       // template:"<div>{{name}}</div>"
     })
     vm.$mount("#app")
-   setTimeout(()=>{
+  /*  setTimeout(()=>{
       vm.name = "xm"
-      // vm.age = "16"
+      vm.age = "16"
       vm.address = "ok"  //页面中未使用 就不会收集这个依赖
       // vm._update(vm._render())  //手动更新
-    },2000) 
+    },2000)  */
+
+    // watcher 中通过 setTimeout(flushSchedulerQueue, 0)
+    vm.name = "xm"
+    /* // 此时不能拿到最新的 HTML 因为setTimeout是异步
+        // console.log(app.innerHTML)  */
+      /*   setTimeout(()=>{
+          // 可以拿到最新的
+          console.log(app.innerHTML)
+        })
+    */
+    /*   // 此时依然不能拿到 最新的 因为Promise是异步微任务 优先级比setTimeout是异步宏任务高
+    Promise.resolve().then(()=>{
+      console.log(app.innerHTML)
+    }) */
+    // 所以watcher 中就不能用 setTimeout(flushSchedulerQueue, 0)
+    // watcher中用 nextTick
+    vm.$nextTick(()=>{
+      console.log(app.innerHTML)
+    })
+
+    // $nextTick 不是创建了一个异步任务 而是将任务维护到了队列中
+    // 放到队列中是同步  执行队列中的更新是异步
+
+        
+
   </script>
 </body>
 </html>

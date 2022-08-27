@@ -31,8 +31,91 @@ class Watcher {
     Dep.target = null
   }
   update() {
-    console.log('触发watcher更新了')
-    this.get() //重新渲染
+    /*console.log('触发watcher更新了')
+    this.get() //重新渲染 */
+    // 异步更新
+    queueWatcher(this) //将当前的watcher放到队列中 去重
+  }
+  run() {
+    console.log('渲染')
+    this.get()
+  }
+}
+let queue = []
+let has = {}
+let pending = false
+
+function flushSchedulerQueue() {
+  let flushQueue = queue.slice(0)
+  queue = []
+  has = {}
+  pending = false
+  flushQueue.forEach((q) => q.run())
+}
+
+function queueWatcher(watcher) {
+  const id = watcher.id
+  if (!has[id]) {
+    queue.push(watcher)
+    has[id] = true
+    // 不管我们的update执行多少次 但是最终只执行一轮刷新操作
+    if (!pending) {
+      /*  // 异步更新
+      setTimeout(flushSchedulerQueue, 0) */
+      nextTick(flushSchedulerQueue)
+      pending = true
+    }
+    console.log(queue)
+  }
+}
+// nextTick  用户可以调用 框架内部也可以调用
+// 所以将cb先存起来 依次执行
+let callbacks = []
+let waiting = false
+function flushCallbacks() {
+  let cbs = callbacks.slice(0)
+  waiting = false
+  callbacks = []
+  cbs.forEach((cb) => cb())
+}
+
+// nextTick 内部没有直接使用setTimeout 而是采用优雅降级的方式
+// 内部先采用promise (ie不兼容)
+// MutationObserver
+// 考虑IE专享的 setImmediate
+// 实在不行 就用 setTimeout
+let timerFunc
+if (Promise) {
+  timerFunc = () => {
+    Promise.resolve().then(flushCallbacks)
+  }
+} else if (MutationObserver) {
+  let observer = new MutationObserver(flushCallbacks)
+  let textNode = document.createTextNode(1)
+  observer.observe(textNode, {
+    characterData: true
+  })
+  timerFunc = () => {
+    textNode.textContent = 2
+    // 1 变 2    flushCallbacks执行
+  }
+} else if (setImmediate) {
+  timerFunc = () => {
+    setImmediate(flushCallbacks)
+  }
+} else {
+  timerFunc = () => {
+    setTimeout(flushCallbacks, 0)
+  }
+}
+
+export function nextTick(cb) {
+  callbacks.push(cb)
+  // console.log(callbacks)
+  if (!waiting) {
+    /*  setTimeout(flushCallbacks, 0) */
+    timerFunc() //兼容性的
+    waiting = true
   }
 }
 

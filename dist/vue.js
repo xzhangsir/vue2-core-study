@@ -432,13 +432,109 @@
     }, {
       key: "update",
       value: function update() {
-        console.log('触发watcher更新了');
-        this.get(); //重新渲染
+        /*console.log('触发watcher更新了')
+        this.get() //重新渲染 */
+        // 异步更新
+        queueWatcher(this); //将当前的watcher放到队列中 去重
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        console.log('渲染');
+        this.get();
       }
     }]);
 
     return Watcher;
   }();
+
+  var queue = [];
+  var has = {};
+  var pending = false;
+
+  function flushSchedulerQueue() {
+    var flushQueue = queue.slice(0);
+    queue = [];
+    has = {};
+    pending = false;
+    flushQueue.forEach(function (q) {
+      return q.run();
+    });
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true; // 不管我们的update执行多少次 但是最终只执行一轮刷新操作
+
+      if (!pending) {
+        /*  // 异步更新
+        setTimeout(flushSchedulerQueue, 0) */
+        nextTick(flushSchedulerQueue);
+        pending = true;
+      }
+
+      console.log(queue);
+    }
+  } // nextTick  用户可以调用 框架内部也可以调用
+  // 所以将cb先存起来 依次执行
+
+
+  var callbacks = [];
+  var waiting = false;
+
+  function flushCallbacks() {
+    var cbs = callbacks.slice(0);
+    waiting = false;
+    callbacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  } // nextTick 内部没有直接使用setTimeout 而是采用优雅降级的方式
+  // 内部先采用promise (ie不兼容)
+  // MutationObserver
+  // 考虑IE专享的 setImmediate
+  // 实在不行 就用 setTimeout
+
+
+  var timerFunc;
+
+  if (Promise) {
+    timerFunc = function timerFunc() {
+      Promise.resolve().then(flushCallbacks);
+    };
+  } else if (MutationObserver) {
+    var observer = new MutationObserver(flushCallbacks);
+    var textNode = document.createTextNode(1);
+    observer.observe(textNode, {
+      characterData: true
+    });
+
+    timerFunc = function timerFunc() {
+      textNode.textContent = 2; // 1 变 2    flushCallbacks执行
+    };
+  } else if (setImmediate) {
+    timerFunc = function timerFunc() {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(flushCallbacks, 0);
+    };
+  }
+
+  function nextTick(cb) {
+    callbacks.push(cb); // console.log(callbacks)
+
+    if (!waiting) {
+      /*  setTimeout(flushCallbacks, 0) */
+      timerFunc(); //兼容性的
+
+      waiting = true;
+    }
+  }
   // 一个视图中 会有多个属性 等同于 多个dep对应一个watcher
   // 同样一个属性可以对应多个视图  即 一个dep对应多个watcher
   // dep和watcher  是多对多的关系
@@ -778,6 +874,7 @@
     this.__init(options);
   }
 
+  Vue.prototype.$nextTick = nextTick;
   initMixin(Vue);
   initLifeCycle(Vue);
   // 将模板转化为ast语法树
