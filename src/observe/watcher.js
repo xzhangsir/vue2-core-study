@@ -1,4 +1,4 @@
-import Dep from './dep'
+import Dep, { popTarget, pushTarget } from './dep'
 
 let id = 0
 
@@ -13,7 +13,10 @@ class Watcher {
     this.getter = fn //getter意味着调用这个函数会触发取值操作
     this.deps = [] //视图记录属性
     this.depsId = new Set()
-    this.get() //先初始化一次
+    this.lazy = options.lazy
+    this.dirty = this.lazy //计算属性缓存标识
+    this.lazy ? undefined : this.get() //先初始化一次
+    this.vm = vm
   }
   addDep(dep) {
     // 一个组件有多个属性 重复的属性 只记录一次
@@ -24,17 +27,41 @@ class Watcher {
       dep.addSub(this) //让dep记住watcher
     }
   }
+  evaluate() {
+    // 获取用户函数的返回值 并且标识为脏
+    this.value = this.get()
+    this.dirty = false
+  }
   get() {
-    //当我们渲染watcher的时候 我们会把当前的渲染watcher放到Dep.target上
+    /*    //当我们渲染watcher的时候 我们会把当前的渲染watcher放到Dep.target上
     Dep.target = this
     this.getter() //会去vm上取值
     Dep.target = null
+ */
+    pushTarget(this)
+    let value = this.getter.call(this.vm)
+    popTarget()
+    return value
+  }
+  depend() {
+    let i = this.deps.length
+    while (i--) {
+      // 让计算属性watcher也收集渲染watcher
+      this.deps[i].depend()
+    }
   }
   update() {
     /*console.log('触发watcher更新了')
     this.get() //重新渲染 */
-    // 异步更新
+    if (this.lazy) {
+      // 如果是计算属性 依赖的值变化了  就标识计算属性是脏的了
+      this.dirty = true
+    } else {
+      queueWatcher(this)
+    }
+    /*  // 异步更新
     queueWatcher(this) //将当前的watcher放到队列中 去重
+  */
   }
   run() {
     console.log('渲染')

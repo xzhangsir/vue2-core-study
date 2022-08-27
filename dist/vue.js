@@ -442,6 +442,15 @@
   }();
 
   Dep.target = null;
+  var stack = [];
+  function pushTarget(watcher) {
+    stack.push(watcher);
+    Dep.target = watcher;
+  }
+  function popTarget() {
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
+  }
 
   var id = 0; // watcher 是观察者
   // dep 是被观察者
@@ -459,7 +468,12 @@
       this.deps = []; //视图记录属性
 
       this.depsId = new Set();
-      this.get(); //先初始化一次
+      this.lazy = options.lazy;
+      this.dirty = this.lazy; //计算属性缓存标识
+
+      this.lazy ? undefined : this.get(); //先初始化一次
+
+      this.vm = vm;
     }
 
     _createClass(Watcher, [{
@@ -476,21 +490,50 @@
         }
       }
     }, {
+      key: "evaluate",
+      value: function evaluate() {
+        // 获取用户函数的返回值 并且标识为脏
+        this.value = this.get();
+        this.dirty = false;
+      }
+    }, {
       key: "get",
       value: function get() {
-        //当我们渲染watcher的时候 我们会把当前的渲染watcher放到Dep.target上
-        Dep.target = this;
-        this.getter(); //会去vm上取值
+        /*    //当我们渲染watcher的时候 我们会把当前的渲染watcher放到Dep.target上
+        Dep.target = this
+        this.getter() //会去vm上取值
+        Dep.target = null
+        */
+        pushTarget(this);
+        var value = this.getter.call(this.vm);
+        popTarget();
+        return value;
+      }
+    }, {
+      key: "depend",
+      value: function depend() {
+        var i = this.deps.length;
 
-        Dep.target = null;
+        while (i--) {
+          // 让计算属性watcher也收集渲染watcher
+          this.deps[i].depend();
+        }
       }
     }, {
       key: "update",
       value: function update() {
         /*console.log('触发watcher更新了')
         this.get() //重新渲染 */
-        // 异步更新
-        queueWatcher(this); //将当前的watcher放到队列中 去重
+        if (this.lazy) {
+          // 如果是计算属性 依赖的值变化了  就标识计算属性是脏的了
+          this.dirty = true;
+        } else {
+          queueWatcher(this);
+        }
+        /*  // 异步更新
+        queueWatcher(this) //将当前的watcher放到队列中 去重
+        */
+
       }
     }, {
       key: "run",
@@ -865,6 +908,10 @@
     if (opts.data) {
       initData(vm);
     }
+
+    if (opts.computed) {
+      initComputed(vm);
+    }
   }
 
   function proxy(vm, target, key) {
@@ -889,6 +936,59 @@
     for (var key in data) {
       proxy(vm, '_data', key);
     }
+  }
+
+  function initComputed(vm) {
+    // 拿到用户的computed
+    var computed = vm.$options.computed; // console.log('computed', computed)
+    // const watchers = {}
+    // 将计算属性的watcher保存到VM上
+
+    var watchers = vm._computedWatchers = {};
+
+    for (var key in computed) {
+      var userDef = computed[key];
+      var fn = typeof userDef === 'function' ? userDef : userDef.get; // 如果直接new Watcher 默认fn就会直接执行 加个lazy
+      // 将计算属性和watcher对应起来
+
+      watchers[key] = new Watcher(vm, fn, {
+        lazy: true
+      });
+      defineComputed(vm, key, userDef);
+    }
+  }
+
+  function defineComputed(target, key, userDef) {
+    // const getter = typeof userDef === 'function' ? userDef : userDef.get
+    var setter = userDef.set || function () {};
+
+    Object.defineProperty(target, key, {
+      // get: getter,
+      // 不能直接执行getter 需要一个方法来判断这个数据是不是脏的
+      get: createComputedGetter(key),
+      set: setter
+    });
+  }
+
+  function createComputedGetter(key) {
+    // 我们需要检测是否需要执行这个getter
+    return function () {
+      // 获取对应属性的watcher
+      var watcher = this._computedWatchers[key];
+
+      if (watcher.dirty) {
+        // 如果数据是脏的 就去执行用户传入的函数
+        watcher.evaluate();
+      }
+
+      if (Dep.target) {
+        //计算属性出栈后 还有渲染watcher
+        // 我应该让计算属性watcher里面的属性 也去收集上层watcher
+        watcher.depend();
+      }
+
+      return watcher.value;
+    };
   }
 
   function initMixin(Vue) {
