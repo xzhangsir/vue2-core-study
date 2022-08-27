@@ -4,6 +4,61 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  // 策略
+  var strats = {};
+  var LIFECYCLE = ['beforeCreate', 'created'];
+  LIFECYCLE.forEach(function (hook) {
+    strats[hook] = function (p, c) {
+      if (c) {
+        if (p) {
+          return p.concat(c);
+        } else {
+          return [c];
+        }
+      } else {
+        return p;
+      }
+    };
+  });
+  function mergeOptions(parent, child) {
+    var options = [];
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+
+    for (var _key in child) {
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+
+    function mergeField(key) {
+      // 策略模式
+      if (strats[key]) {
+        options[key] = strats[key](parent[key], child[key]);
+      } else {
+        options[key] = child[key] || parent[key];
+      }
+    }
+
+    return options;
+  }
+
+  function initGlobalAPI(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      // console.log(this.options)
+      // console.log(mixin)
+      // 蒋用户的选型和全局的options进行合并
+      // {} {created:function(){}} => {created:[fn]} //第一次
+      // {created:[fn]} {created:[fn]} => {created:[fn,fn]} //再一次
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -671,6 +726,15 @@
     var watcher = new Watcher(vm, updateComponent, true);
     console.log(watcher);
   }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+
+    if (handlers) {
+      handlers.forEach(function (handler) {
+        return handler.call(vm);
+      });
+    }
+  }
 
   // 对数组中的部分方法进行重写
   var oldArrayProto = Array.prototype; //获取数组的原型
@@ -829,11 +893,15 @@
 
   function initMixin(Vue) {
     Vue.prototype.__init = function (options) {
-      var vm = this;
-      vm.$options = options; //将用户的选项挂载到实例上
-      //初始化状态
+      var vm = this; // vm.$options = options //将用户的选项挂载到实例上
+      //我们定义的全局指令和过滤器…… 都会挂载到实力上
+
+      vm.$options = mergeOptions(this.constructor.options, options); // console.log(vm.$options)
+
+      callHook(vm, 'beforeCreate'); //初始化状态
 
       initState(vm);
+      callHook(vm, 'created');
 
       if (options.el) {
         vm.$mount(options.el); //实现数据的挂载
@@ -877,6 +945,7 @@
   Vue.prototype.$nextTick = nextTick;
   initMixin(Vue);
   initLifeCycle(Vue);
+  initGlobalAPI(Vue);
   // 将模板转化为ast语法树
   // 将ast语法树转为render函数
   // 每次数据更新只执行render函数(无须再次执行ast转化的过程)

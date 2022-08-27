@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <script src = "vue.js"></script>
+  <script>
+  
+    Vue.mixin({
+      created(){
+        console.log("mixin1-created")
+      }
+    })
+     Vue.mixin({
+      created(){
+        console.log("mixin2-created")
+      }
+    })
+    console.log(Vue.options)
+
+      const vm = new Vue({
+      data(){
+        return {
+          name:'zx',
+          age:18,
+          address:{
+            city:"zhongguo"
+          },
+          hobby:["eat","play",{a:1}]
+        }
+      },
+      created(){
+        console.log("created")
+      }
+    })
+
+
+  </script>
+</body>
+</html>

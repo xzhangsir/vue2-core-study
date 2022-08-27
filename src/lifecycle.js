@@ -93,3 +93,10 @@ export function mountComponent(vm, el) {
   const watcher = new Watcher(vm, updateComponent, true)
   console.log(watcher)
 }
+
+export function callHook(vm, hook) {
+  const handlers = vm.$options[hook]
+  if (handlers) {
+    handlers.forEach((handler) => handler.call(vm))
+  }
+}
