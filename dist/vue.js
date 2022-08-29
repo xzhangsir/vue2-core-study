@@ -829,7 +829,10 @@
       if (inserted) {
         // 对新增的内容进行观测
         ob.observeArray(inserted);
-      }
+      } // console.log('array 更新')
+
+
+      ob.dep.notify(); //组件变化了通知对应的watcher更新
 
       return result;
     };
@@ -839,6 +842,7 @@
     function Observer(data) {
       _classCallCheck(this, Observer);
 
+      this.dep = new Dep();
       Object.defineProperty(data, '__ob__', {
         value: this,
         enumerable: false //不能被枚举
@@ -876,8 +880,19 @@
     return Observer;
   }();
 
+  function dependArray(value) {
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
+
   function defineReactive(target, key, value) {
-    observe(value); //如果value是对象 再次递归劫持 深度劫持
+    var childOb = observe(value); //如果value是对象 再次递归劫持 深度劫持
 
     var dep = new Dep(); //每个属性都有一个dep与之对应
 
@@ -885,13 +900,22 @@
       get: function get() {
         if (Dep.target) {
           dep.depend(); //让这个属性的收集器 记住这个watcher
-        }
 
-        console.log('来取值了', key);
+          if (childOb) {
+            // 让数组和对象本身也实现依赖收集
+            childOb.dep.depend(); // 数组里面套数组
+
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
+          }
+        } // console.log('来取值了', key)
+
+
         return value;
       },
       set: function set(newValue) {
-        console.log('设置值了', key);
+        // console.log('设置值了', key)
         if (newValue === value) return;
         observe(newValue); //如果设置的值是对象 再次代理
 

@@ -31,6 +31,8 @@ methods.forEach((method) => {
       // 对新增的内容进行观测
       ob.observeArray(inserted)
     }
+    // console.log('array 更新')
+    ob.dep.notify() //组件变化了通知对应的watcher更新
     return result
   }
 })
