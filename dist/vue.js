@@ -457,13 +457,20 @@
   // dep 变化了会通知观察者watcher更新
 
   var Watcher = /*#__PURE__*/function () {
-    function Watcher(vm, fn, options) {
+    function Watcher(vm, exprOrfn, options, cb) {
       _classCallCheck(this, Watcher);
 
       this.id = id++;
       this.renderWatcher = options; //是一个渲染watcher
 
-      this.getter = fn; //getter意味着调用这个函数会触发取值操作
+      if (typeof exprOrfn === 'string') {
+        // watch需要的
+        this.getter = function () {
+          return vm[exprOrfn];
+        };
+      } else {
+        this.getter = exprOrfn; //getter意味着调用这个函数会触发取值操作
+      }
 
       this.deps = []; //视图记录属性
 
@@ -471,9 +478,11 @@
       this.lazy = options.lazy;
       this.dirty = this.lazy; //计算属性缓存标识
 
-      this.lazy ? undefined : this.get(); //先初始化一次
-
       this.vm = vm;
+      this.user = options.user; //watch用到：标识是不是用户自己的watcher
+
+      this.cb = cb;
+      this.value = this.lazy ? undefined : this.get(); //先初始化一次
     }
 
     _createClass(Watcher, [{
@@ -539,7 +548,12 @@
       key: "run",
       value: function run() {
         console.log('渲染');
-        this.get();
+        var oldVal = this.value;
+        var newVal = this.get();
+
+        if (this.user) {
+          this.cb.call(this.vm, newVal, oldVal);
+        }
       }
     }]);
 
@@ -766,8 +780,7 @@
     }; // true 标识是一个渲染watcher
 
 
-    var watcher = new Watcher(vm, updateComponent, true);
-    console.log(watcher);
+    new Watcher(vm, updateComponent, true); // console.log(watcher)
   }
   function callHook(vm, hook) {
     var handlers = vm.$options[hook];
@@ -912,6 +925,10 @@
     if (opts.computed) {
       initComputed(vm);
     }
+
+    if (opts.watch) {
+      initWatch$1(vm);
+    }
   }
 
   function proxy(vm, target, key) {
@@ -991,6 +1008,31 @@
     };
   }
 
+  function initWatch$1(vm) {
+    var watch = vm.$options.watch;
+
+    for (var key in watch) {
+      var handler = watch[key];
+      console.log(handler);
+
+      if (Array.handler) {
+        for (var i = 0; i < handler.length; i++) {
+          createWatcher(vm, key, handler[i]);
+        }
+      } else {
+        createWatcher(vm, key, handler);
+      }
+    }
+  }
+
+  function createWatcher(vm, key, handler) {
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+
+    return vm.$watch(key, handler);
+  }
+
   function initMixin(Vue) {
     Vue.prototype.__init = function (options) {
       var vm = this; // vm.$options = options //将用户的选项挂载到实例上
@@ -1038,6 +1080,15 @@
     };
   }
 
+  function initWatch(Vue) {
+    // watch最终调用的都是这个
+    Vue.prototype.$watch = function (exprOrFn, cb) {
+      new Watcher(this, exprOrFn, {
+        user: true
+      }, cb);
+    };
+  }
+
   function Vue(options) {
     this.__init(options);
   }
@@ -1046,6 +1097,7 @@
   initMixin(Vue);
   initLifeCycle(Vue);
   initGlobalAPI(Vue);
+  initWatch(Vue);
   // 将模板转化为ast语法树
   // 将ast语法树转为render函数
   // 每次数据更新只执行render函数(无须再次执行ast转化的过程)

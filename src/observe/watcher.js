@@ -7,16 +7,26 @@ let id = 0
 // dep 变化了会通知观察者watcher更新
 
 class Watcher {
-  constructor(vm, fn, options) {
+  constructor(vm, exprOrfn, options, cb) {
     this.id = id++
     this.renderWatcher = options //是一个渲染watcher
-    this.getter = fn //getter意味着调用这个函数会触发取值操作
+    if (typeof exprOrfn === 'string') {
+      // watch需要的
+      this.getter = function () {
+        return vm[exprOrfn]
+      }
+    } else {
+      this.getter = exprOrfn //getter意味着调用这个函数会触发取值操作
+    }
+
     this.deps = [] //视图记录属性
     this.depsId = new Set()
     this.lazy = options.lazy
     this.dirty = this.lazy //计算属性缓存标识
-    this.lazy ? undefined : this.get() //先初始化一次
     this.vm = vm
+    this.user = options.user //watch用到：标识是不是用户自己的watcher
+    this.cb = cb
+    this.value = this.lazy ? undefined : this.get() //先初始化一次
   }
   addDep(dep) {
     // 一个组件有多个属性 重复的属性 只记录一次
@@ -65,7 +75,11 @@ class Watcher {
   }
   run() {
     console.log('渲染')
-    this.get()
+    let oldVal = this.value
+    let newVal = this.get()
+    if (this.user) {
+      this.cb.call(this.vm, newVal, oldVal)
+    }
   }
 }
 let queue = []

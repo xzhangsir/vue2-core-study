@@ -91,7 +91,7 @@ export function mountComponent(vm, el) {
 
   // true 标识是一个渲染watcher
   const watcher = new Watcher(vm, updateComponent, true)
-  console.log(watcher)
+  // console.log(watcher)
 }
 
 export function callHook(vm, hook) {
