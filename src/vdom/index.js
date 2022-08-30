@@ -5,7 +5,7 @@ export function createElementVNode(vm, tag, data, ...children) {
   if (key) {
     delete data.key
   }
-  return vnode(vm, tag, data.key, data, children)
+  return vnode(vm, tag, key, data, children)
 }
 
 // _v()
@@ -24,4 +24,9 @@ function vnode(vm, tag, key, data, children, text) {
     children,
     text
   }
+}
+
+// 判断两个虚拟节点是不是同一个
+export function isSameVnode(vnode1, vnode2) {
+  return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key
 }

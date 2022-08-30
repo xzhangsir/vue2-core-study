@@ -3,7 +3,7 @@ import { initGlobalAPI } from './gloablAPI'
 import { initMixin } from './init'
 import { initLifeCycle } from './lifecycle'
 import { nextTick } from './observe/watcher'
-import { createElm } from './vdom/patch'
+import { createElm, patch } from './vdom/patch'
 import { initWatch } from './watch'
 function Vue(options) {
   this.__init(options)
@@ -24,19 +24,28 @@ export default Vue
 
 // ---------为了方便观察前后的虚拟节点 测试代码------
 
-let render1 = compileToFunction('<i>{{name}}</i>')
+let render1 = compileToFunction(`<ul style = "color:red">
+  <li key = 'a'>a</li>
+  <li key="b">b</li>
+  <li key="c">c</li>
+</ul>`)
 let vm1 = new Vue({ data: { name: 'zx' } })
 let prevVnode = render1.call(vm1)
 
 let el = createElm(prevVnode)
 document.body.appendChild(el)
 
-let render2 = compileToFunction('<em>{{name}}</em>')
+let render2 = compileToFunction(`<ul  style = "color:red">
+  <li key="a">a</li>
+  <li key="b">b</li>
+  <li key="c">c</li>
+  <li key="d">d</li>
+</ul>`)
 let vm2 = new Vue({ data: { name: 'xm' } })
 let nextVnode = render2.call(vm2)
 
-console.log(prevVnode)
-console.log(nextVnode)
+// console.log(prevVnode)
+// console.log(nextVnode)
 
 // 直接将新的节点替换掉老的
 /* setTimeout(() => {
@@ -44,4 +53,6 @@ console.log(nextVnode)
   el.parentNode.replaceChild(newEl, el)
 }, 1000) */
 
-// diff算法是个平级比较的过程 父亲和父亲比较 儿子和儿子比较
+setTimeout(() => {
+  patch(prevVnode, nextVnode)
+}, 1000)
