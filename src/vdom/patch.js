@@ -18,7 +18,7 @@ export function createElm(vnode) {
   return vnode.el
 }
 
-export function patchProps(el, oldProps, props) {
+export function patchProps(el, oldProps = {}, props = {}) {
   // 老的属性中有 新的没有 要删除老的  样式和其它属性
   let oldStyles = oldProps.style || {}
   let newStyles = props.style || {}
@@ -140,5 +140,64 @@ function updateChildren(el, oldChildren, newChildren) {
 
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
     // 双方有一方  头指针大于尾部指针 则停止循环
+    // 头头比对
+    if (isSameVnode(oldStartVnode, newStartVnode)) {
+      // 如果是相同节点 则递归比较子节点
+      patchVnode(oldStartVnode, newStartVnode)
+      // 从头到尾移动指针
+      oldStartVnode = oldChildren[++oldStartIndex]
+      newStartVnode = newChildren[++newStartIndex]
+    }
+    // 尾尾比对
+    if (isSameVnode(oldEndVnode, newEndVnode)) {
+      // 如果是相同节点 则递归比较子节点
+      patchVnode(oldEndVnode, newEndVnode)
+      // 从尾到头移动指针
+      oldEndVnode = oldChildren[--oldEndIndex]
+      newEndVnode = newChildren[--newEndIndex]
+    }
+  }
+  /**
+   * 
+   * 老的
+   * <li key='a'>a</li>
+     <li key="b">b</li>
+     <li key="c">c</li>
+   * 
+     新的
+   * <li key='a'>a</li>
+     <li key="b">b</li>
+     <li key="c">c</li>
+     <li key="d">d</li>
+  */
+
+  if (newStartIndex <= newEndIndex) {
+    for (let i = newStartIndex; i <= newEndIndex; i++) {
+      let childEl = createElm(newChildren[i])
+      // el.appendChild(childEl)
+      let anchor = newChildren[newEndIndex + 1]
+        ? newChildren[newEndIndex + 1].el
+        : null //获取下一个元素 可能没有
+      el.insertBefore(childEl, anchor) //anchor为null的是 则会认为是appendChild
+    }
+  }
+  /**
+   * 
+   * 老的
+   * <li key='a'>a</li>
+     <li key="b">b</li>
+     <li key="c">c</li>
+     <li key="d">d</li>
+   * 
+     新的
+   * <li key='a'>a</li>
+     <li key="b">b</li>
+     <li key="c">c</li>
+  */
+  if (oldStartIndex <= oldEndIndex) {
+    for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+      let childEl = oldChildren[i].el
+      el.removeChild(childEl)
+    }
   }
 }

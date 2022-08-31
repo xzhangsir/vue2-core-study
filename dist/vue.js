@@ -710,7 +710,9 @@
 
     return vnode.el;
   }
-  function patchProps(el, oldProps, props) {
+  function patchProps(el) {
+    var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
     // 老的属性中有 新的没有 要删除老的  样式和其它属性
     var oldStyles = oldProps.style || {};
     var newStyles = props.style || {};
@@ -824,6 +826,8 @@
   }
 
   function updateChildren(el, oldChildren, newChildren) {
+    var oldStartIndex = 0;
+    var newStartIndex = 0;
     var oldEndIndex = oldChildren.length - 1;
     var newEndIndex = newChildren.length - 1;
     var oldStartVnode = oldChildren[0];
@@ -832,6 +836,72 @@
     var newEndVnode = newChildren[newEndIndex];
     console.log(oldStartVnode, newStartVnode);
     console.log(oldEndVnode, newEndVnode);
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      // 双方有一方  头指针大于尾部指针 则停止循环
+      // 头头比对
+      if (isSameVnode(oldStartVnode, newStartVnode)) {
+        // 如果是相同节点 则递归比较子节点
+        patchVnode(oldStartVnode, newStartVnode); // 从头到尾移动指针
+
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } // 尾尾比对
+
+
+      if (isSameVnode(oldEndVnode, newEndVnode)) {
+        // 如果是相同节点 则递归比较子节点
+        patchVnode(oldEndVnode, newEndVnode); // 从尾到头移动指针
+
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      }
+    }
+    /**
+     * 
+     * 老的
+     * <li key='a'>a</li>
+       <li key="b">b</li>
+       <li key="c">c</li>
+     * 
+       新的
+     * <li key='a'>a</li>
+       <li key="b">b</li>
+       <li key="c">c</li>
+       <li key="d">d</li>
+    */
+
+
+    if (newStartIndex <= newEndIndex) {
+      for (var i = newStartIndex; i <= newEndIndex; i++) {
+        var childEl = createElm(newChildren[i]); // el.appendChild(childEl)
+
+        var anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null; //获取下一个元素 可能没有
+
+        el.insertBefore(childEl, anchor); //anchor为null的是 则会认为是appendChild
+      }
+    }
+    /**
+     * 
+     * 老的
+     * <li key='a'>a</li>
+       <li key="b">b</li>
+       <li key="c">c</li>
+       <li key="d">d</li>
+     * 
+       新的
+     * <li key='a'>a</li>
+       <li key="b">b</li>
+       <li key="c">c</li>
+    */
+
+
+    if (oldStartIndex <= oldEndIndex) {
+      for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
+        var _childEl = oldChildren[_i].el;
+        el.removeChild(_childEl);
+      }
+    }
   }
 
   function initLifeCycle(Vue) {
@@ -1228,7 +1298,7 @@
   // 根据生成的虚拟节点创造真实DOM
   // ---------为了方便观察前后的虚拟节点 测试代码------
 
-  var render1 = compileToFunction("<ul style = \"color:red\">\n  <li key = 'a'>a</li>\n  <li key=\"b\">b</li>\n  <li key=\"c\">c</li>\n</ul>");
+  var render1 = compileToFunction("<ul style = \"color:red\">\n  <li key='a'>a</li>\n  <li key=\"b\">b</li>\n  <li key=\"c\">c</li>\n</ul>");
   var vm1 = new Vue({
     data: {
       name: 'zx'
@@ -1237,7 +1307,7 @@
   var prevVnode = render1.call(vm1);
   var el = createElm(prevVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<ul  style = \"color:red\">\n  <li key=\"a\">a</li>\n  <li key=\"b\">b</li>\n  <li key=\"c\">c</li>\n  <li key=\"d\">d</li>\n</ul>");
+  var render2 = compileToFunction("<ul  style = \"color:red\">\n  <li key=\"d\">d</li>\n  <li key=\"a\">a</li>\n  <li key=\"b\">b</li>\n  <li key=\"c\">c</li>\n</ul>");
   var vm2 = new Vue({
     data: {
       name: 'xm'

@@ -25,7 +25,7 @@ export default Vue
 // ---------为了方便观察前后的虚拟节点 测试代码------
 
 let render1 = compileToFunction(`<ul style = "color:red">
-  <li key = 'a'>a</li>
+  <li key='a'>a</li>
   <li key="b">b</li>
   <li key="c">c</li>
 </ul>`)
@@ -36,10 +36,10 @@ let el = createElm(prevVnode)
 document.body.appendChild(el)
 
 let render2 = compileToFunction(`<ul  style = "color:red">
+  <li key="d">d</li>
   <li key="a">a</li>
   <li key="b">b</li>
   <li key="c">c</li>
-  <li key="d">d</li>
 </ul>`)
 let vm2 = new Vue({ data: { name: 'xm' } })
 let nextVnode = render2.call(vm2)
