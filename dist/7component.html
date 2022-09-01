@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id = "app">
+    <span>{{name}}<i>{{age}}</i></span>
+  </div>
+  <div id = "root"></div>
+  <script src = "vue.js"></script>
+  <script>
+    // 组件的三大特性
+    //  自定义标签 组件里面有自己的属性和事件 组件的插槽
+    // Vue.extend  创建组件的构造函数
+    // Vue.component  创建组件
+    /**
+    const vm = new Vue({
+      el:"#app",
+      data(){
+        return {
+          name:'zx',
+          age:18,
+        }
+      },
+      // component:{
+      //   "my-but":{
+      //      template:`<button>局部组件按钮</button>`
+      //   }
+      // } 
+    })
+    */
+    // 全局组件
+    /* Vue.component("my-but",{
+      template:`<button>按钮</button>`
+    }) */
+  /*   Vue.component("my-but",Vue.extend({
+      template:`<button>按钮</button>`
+    })) */
+
+    Vue.component("my-button",Vue.extend({
+      template:`<button>全局组件</button>`
+    }))
+
+    let  Sub = Vue.extend({
+      template:`<div>子组件  <my-button></my-button></div>`,
+      // components:{
+      //   "my-button":{
+      //     template:`<button>局部组件</button>`
+      //   }
+      // }
+    })
+    new Sub().$mount("#root")
+  </script>
+</body>
+</html>

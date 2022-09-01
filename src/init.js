@@ -34,7 +34,7 @@ export function initMixin(Vue) {
           template = ops.template
         }
       }
-      if (template) {
+      if (template && el) {
         // 对模板进行编译
         const render = compileToFunction(template)
         ops.render = render

@@ -6,10 +6,22 @@ export function initLifeCycle(Vue) {
   // _c('div',{id:"app",style:{"color":"red"}},_c('div',{style:{"color":"green"}},_v("name:"+_s(name))),_c('i',null,_v("链接")),_c('div',null,_v("age:"+_s(age))))
   Vue.prototype._update = function (vnode) {
     // console.log('update', vnode)
+    const vm = this
     const el = this.$el
     // console.log(el)
     // patch  既有初始化的功能 又有更新的功能
-    vm.$el = patch(el, vnode)
+    /* vm.$el = patch(el, vnode) */
+    // 把组件第一次产生的虚拟节点保存到_vnode上
+    const prevVnode = vm._vnode
+    vm._vnode = vnode
+    if (prevVnode) {
+      //prevVnode 有值 说明第一次渲染过了
+      // 更新
+      vm.$el = patch(prevVnode, vnode)
+    } else {
+      // 初次渲染
+      vm.$el = patch(el, vnode)
+    }
   }
   // _c('div',{},...children)
   Vue.prototype._c = function () {

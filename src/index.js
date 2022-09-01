@@ -22,9 +22,9 @@ export default Vue
 // 每次数据更新只执行render函数(无须再次执行ast转化的过程)
 // 根据生成的虚拟节点创造真实DOM
 
-// ---------为了方便观察前后的虚拟节点 测试代码------
+// --------- diff 为了方便观察前后的虚拟节点 测试代码------
 
-let render1 = compileToFunction(`<ul style = "color:red">
+/* let render1 = compileToFunction(`<ul style = "color:red">
   <li key='a'>a</li>
   <li key="b">b</li>
   <li key="c">c</li>
@@ -48,12 +48,13 @@ let vm2 = new Vue({ data: { name: 'xm' } })
 let nextVnode = render2.call(vm2)
 
 // 直接将新的节点替换掉老的
-/* setTimeout(() => {
-  let newEl = createElm(nextVnode)
-  el.parentNode.replaceChild(newEl, el)
-}, 1000) */
+//  setTimeout(() => {
+//   let newEl = createElm(nextVnode)
+//   el.parentNode.replaceChild(newEl, el)
+// }, 1000) 
 
 // diff
 setTimeout(() => {
   patch(prevVnode, nextVnode)
 }, 1000)
+ */
