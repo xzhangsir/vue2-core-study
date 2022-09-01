@@ -37,16 +37,15 @@ let el = createElm(prevVnode)
 document.body.appendChild(el)
 
 let render2 = compileToFunction(`<ul  style = "color:red">
-  <li key="d">d</li>
-  <li key="c">c</li>
   <li key="b">b</li>
+  <li key="m">m</li>
   <li key="a">a</li>
+  <li key="p">p</li>
+  <li key="c">c</li>
+  <li key="q">q</li>
 </ul>`)
 let vm2 = new Vue({ data: { name: 'xm' } })
 let nextVnode = render2.call(vm2)
-
-// console.log(prevVnode)
-// console.log(nextVnode)
 
 // 直接将新的节点替换掉老的
 /* setTimeout(() => {
@@ -54,6 +53,7 @@ let nextVnode = render2.call(vm2)
   el.parentNode.replaceChild(newEl, el)
 }, 1000) */
 
+// diff
 setTimeout(() => {
   patch(prevVnode, nextVnode)
 }, 1000)

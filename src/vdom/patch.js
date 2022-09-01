@@ -138,10 +138,25 @@ function updateChildren(el, oldChildren, newChildren) {
   // console.log(oldStartVnode, newStartVnode)
   // console.log(oldEndVnode, newEndVnode)
 
+  function makeIndexByKey(children) {
+    let map = {}
+    children.forEach((child, index) => {
+      map[child.key] = index
+    })
+    return map
+  }
+
+  let map = makeIndexByKey(oldChildren)
+  // console.log(map)
+
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-    // 双方有一方  头指针大于尾部指针 则停止循环
-    // 头头比对
-    if (isSameVnode(oldStartVnode, newStartVnode)) {
+    if (!oldStartVnode) {
+      oldStartVnode = oldChildren[++oldStartIndex]
+    } else if (!oldEndVnode) {
+      oldEndVnode = oldChildren[--oldEndIndex]
+    } else if (isSameVnode(oldStartVnode, newStartVnode)) {
+      // 双方有一方  头指针大于尾部指针 则停止循环
+      // 头头比对
       // 如果是相同节点 则递归比较子节点
       patchVnode(oldStartVnode, newStartVnode)
       // 从头到尾移动指针
@@ -168,6 +183,21 @@ function updateChildren(el, oldChildren, newChildren) {
 
       oldStartVnode = oldChildren[++oldStartIndex]
       newEndVnode = newChildren[--newEndIndex]
+    } else {
+      // 乱序比对  abcd=>bmapcq
+      // 根据老的列表做一个映射关系 用新的去老的里面找 找到则移动 找不到则添加 最后多余的删除
+      let moveIndex = map[newStartVnode.key]
+      if (moveIndex !== undefined) {
+        // 找到则移动
+        let moveVnode = oldChildren[moveIndex] // 找到对应的虚拟节点
+        el.insertBefore(moveVnode.el, oldStartVnode.el) //
+        oldChildren[moveIndex] = undefined //标识这个节点已经移动了
+        patchVnode(moveVnode, newStartVnode) //对比属性和子节点
+      } else {
+        // 找不到则添加
+        el.insertBefore(createElm(newStartVnode), oldStartVnode.el)
+      }
+      newStartVnode = newChildren[++newStartIndex]
     }
   }
 
@@ -185,8 +215,10 @@ function updateChildren(el, oldChildren, newChildren) {
   //  abcd => abc dabc => abc
   if (oldStartIndex <= oldEndIndex) {
     for (let i = oldStartIndex; i <= oldEndIndex; i++) {
-      let childEl = oldChildren[i].el
-      el.removeChild(childEl)
+      if (oldChildren[i]) {
+        let childEl = oldChildren[i].el
+        el.removeChild(childEl)
+      }
     }
   }
 }

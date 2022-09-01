@@ -836,10 +836,24 @@
     var newEndVnode = newChildren[newEndIndex]; // console.log(oldStartVnode, newStartVnode)
     // console.log(oldEndVnode, newEndVnode)
 
+    function makeIndexByKey(children) {
+      var map = {};
+      children.forEach(function (child, index) {
+        map[child.key] = index;
+      });
+      return map;
+    }
+
+    var map = makeIndexByKey(oldChildren); // console.log(map)
+
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-      // 双方有一方  头指针大于尾部指针 则停止循环
-      // 头头比对
-      if (isSameVnode(oldStartVnode, newStartVnode)) {
+      if (!oldStartVnode) {
+        oldStartVnode = oldChildren[++oldStartIndex];
+      } else if (!oldEndVnode) {
+        oldEndVnode = oldChildren[--oldEndIndex];
+      } else if (isSameVnode(oldStartVnode, newStartVnode)) {
+        // 双方有一方  头指针大于尾部指针 则停止循环
+        // 头头比对
         // 如果是相同节点 则递归比较子节点
         patchVnode(oldStartVnode, newStartVnode); // 从头到尾移动指针
 
@@ -864,6 +878,26 @@
         el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling);
         oldStartVnode = oldChildren[++oldStartIndex];
         newEndVnode = newChildren[--newEndIndex];
+      } else {
+        // 乱序比对  abcd=>bmapcq
+        // 根据老的列表做一个映射关系 用新的去老的里面找 找到则移动 找不到则添加 最后多余的删除
+        var moveIndex = map[newStartVnode.key];
+
+        if (moveIndex !== undefined) {
+          // 找到则移动
+          var moveVnode = oldChildren[moveIndex]; // 找到对应的虚拟节点
+
+          el.insertBefore(moveVnode.el, oldStartVnode.el); //
+
+          oldChildren[moveIndex] = undefined; //标识这个节点已经移动了
+
+          patchVnode(moveVnode, newStartVnode); //对比属性和子节点
+        } else {
+          // 找不到则添加
+          el.insertBefore(createElm(newStartVnode), oldStartVnode.el);
+        }
+
+        newStartVnode = newChildren[++newStartIndex];
       }
     } //  abc => abcd   abc => dabc
 
@@ -881,8 +915,10 @@
 
     if (oldStartIndex <= oldEndIndex) {
       for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
-        var _childEl = oldChildren[_i].el;
-        el.removeChild(_childEl);
+        if (oldChildren[_i]) {
+          var _childEl = oldChildren[_i].el;
+          el.removeChild(_childEl);
+        }
       }
     }
   }
@@ -1290,20 +1326,19 @@
   var prevVnode = render1.call(vm1);
   var el = createElm(prevVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<ul  style = \"color:red\">\n  <li key=\"d\">d</li>\n  <li key=\"c\">c</li>\n  <li key=\"b\">b</li>\n  <li key=\"a\">a</li>\n</ul>");
+  var render2 = compileToFunction("<ul  style = \"color:red\">\n  <li key=\"b\">b</li>\n  <li key=\"m\">m</li>\n  <li key=\"a\">a</li>\n  <li key=\"p\">p</li>\n  <li key=\"c\">c</li>\n  <li key=\"q\">q</li>\n</ul>");
   var vm2 = new Vue({
     data: {
       name: 'xm'
     }
   });
-  var nextVnode = render2.call(vm2); // console.log(prevVnode)
-  // console.log(nextVnode)
-  // 直接将新的节点替换掉老的
+  var nextVnode = render2.call(vm2); // 直接将新的节点替换掉老的
 
   /* setTimeout(() => {
     let newEl = createElm(nextVnode)
     el.parentNode.replaceChild(newEl, el)
   }, 1000) */
+  // diff
 
   setTimeout(function () {
     patch(prevVnode, nextVnode);
