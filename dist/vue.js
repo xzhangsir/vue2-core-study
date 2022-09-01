@@ -833,9 +833,8 @@
     var oldStartVnode = oldChildren[0];
     var newStartVnode = newChildren[0];
     var oldEndVnode = oldChildren[oldEndIndex];
-    var newEndVnode = newChildren[newEndIndex];
-    console.log(oldStartVnode, newStartVnode);
-    console.log(oldEndVnode, newEndVnode);
+    var newEndVnode = newChildren[newEndIndex]; // console.log(oldStartVnode, newStartVnode)
+    // console.log(oldEndVnode, newEndVnode)
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
       // 双方有一方  头指针大于尾部指针 则停止循环
@@ -846,30 +845,27 @@
 
         oldStartVnode = oldChildren[++oldStartIndex];
         newStartVnode = newChildren[++newStartIndex];
-      } // 尾尾比对
-
-
-      if (isSameVnode(oldEndVnode, newEndVnode)) {
+      } else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        // 尾尾比对
         // 如果是相同节点 则递归比较子节点
         patchVnode(oldEndVnode, newEndVnode); // 从尾到头移动指针
 
         oldEndVnode = oldChildren[--oldEndIndex];
         newEndVnode = newChildren[--newEndIndex];
+      } else if (isSameVnode(oldEndVnode, newStartVnode)) {
+        // 交叉比对(尾头)  abcd => dabc
+        patchVnode(oldEndVnode, newStartVnode);
+        el.insertBefore(oldEndVnode.el, oldStartVnode.el);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else if (isSameVnode(oldStartVnode, newEndVnode)) {
+        // 交叉比对(头尾)  abcd => dcba
+        patchVnode(oldStartVnode, newEndVnode);
+        el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newEndVnode = newChildren[--newEndIndex];
       }
-    }
-    /**
-     * 
-     * 老的
-     * <li key='a'>a</li>
-       <li key="b">b</li>
-       <li key="c">c</li>
-     * 
-       新的
-     * <li key='a'>a</li>
-       <li key="b">b</li>
-       <li key="c">c</li>
-       <li key="d">d</li>
-    */
+    } //  abc => abcd   abc => dabc
 
 
     if (newStartIndex <= newEndIndex) {
@@ -880,20 +876,7 @@
 
         el.insertBefore(childEl, anchor); //anchor为null的是 则会认为是appendChild
       }
-    }
-    /**
-     * 
-     * 老的
-     * <li key='a'>a</li>
-       <li key="b">b</li>
-       <li key="c">c</li>
-       <li key="d">d</li>
-     * 
-       新的
-     * <li key='a'>a</li>
-       <li key="b">b</li>
-       <li key="c">c</li>
-    */
+    } //  abcd => abc dabc => abc
 
 
     if (oldStartIndex <= oldEndIndex) {
@@ -1298,7 +1281,7 @@
   // 根据生成的虚拟节点创造真实DOM
   // ---------为了方便观察前后的虚拟节点 测试代码------
 
-  var render1 = compileToFunction("<ul style = \"color:red\">\n  <li key='a'>a</li>\n  <li key=\"b\">b</li>\n  <li key=\"c\">c</li>\n</ul>");
+  var render1 = compileToFunction("<ul style = \"color:red\">\n  <li key='a'>a</li>\n  <li key=\"b\">b</li>\n  <li key=\"c\">c</li>\n  <li key=\"d\">d</li>\n</ul>");
   var vm1 = new Vue({
     data: {
       name: 'zx'
@@ -1307,7 +1290,7 @@
   var prevVnode = render1.call(vm1);
   var el = createElm(prevVnode);
   document.body.appendChild(el);
-  var render2 = compileToFunction("<ul  style = \"color:red\">\n  <li key=\"d\">d</li>\n  <li key=\"a\">a</li>\n  <li key=\"b\">b</li>\n  <li key=\"c\">c</li>\n</ul>");
+  var render2 = compileToFunction("<ul  style = \"color:red\">\n  <li key=\"d\">d</li>\n  <li key=\"c\">c</li>\n  <li key=\"b\">b</li>\n  <li key=\"a\">a</li>\n</ul>");
   var vm2 = new Vue({
     data: {
       name: 'xm'

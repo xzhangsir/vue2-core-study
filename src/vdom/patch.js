@@ -135,8 +135,8 @@ function updateChildren(el, oldChildren, newChildren) {
   let oldEndVnode = oldChildren[oldEndIndex]
   let newEndVnode = newChildren[newEndIndex]
 
-  console.log(oldStartVnode, newStartVnode)
-  console.log(oldEndVnode, newEndVnode)
+  // console.log(oldStartVnode, newStartVnode)
+  // console.log(oldEndVnode, newEndVnode)
 
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
     // 双方有一方  头指针大于尾部指针 则停止循环
@@ -147,30 +147,31 @@ function updateChildren(el, oldChildren, newChildren) {
       // 从头到尾移动指针
       oldStartVnode = oldChildren[++oldStartIndex]
       newStartVnode = newChildren[++newStartIndex]
-    }
-    // 尾尾比对
-    if (isSameVnode(oldEndVnode, newEndVnode)) {
+    } else if (isSameVnode(oldEndVnode, newEndVnode)) {
+      // 尾尾比对
       // 如果是相同节点 则递归比较子节点
       patchVnode(oldEndVnode, newEndVnode)
       // 从尾到头移动指针
       oldEndVnode = oldChildren[--oldEndIndex]
       newEndVnode = newChildren[--newEndIndex]
+    } else if (isSameVnode(oldEndVnode, newStartVnode)) {
+      // 交叉比对(尾头)  abcd => dabc
+      patchVnode(oldEndVnode, newStartVnode)
+      el.insertBefore(oldEndVnode.el, oldStartVnode.el)
+
+      oldEndVnode = oldChildren[--oldEndIndex]
+      newStartVnode = newChildren[++newStartIndex]
+    } else if (isSameVnode(oldStartVnode, newEndVnode)) {
+      // 交叉比对(头尾)  abcd => dcba
+      patchVnode(oldStartVnode, newEndVnode)
+      el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling)
+
+      oldStartVnode = oldChildren[++oldStartIndex]
+      newEndVnode = newChildren[--newEndIndex]
     }
   }
-  /**
-   * 
-   * 老的
-   * <li key='a'>a</li>
-     <li key="b">b</li>
-     <li key="c">c</li>
-   * 
-     新的
-   * <li key='a'>a</li>
-     <li key="b">b</li>
-     <li key="c">c</li>
-     <li key="d">d</li>
-  */
 
+  //  abc => abcd   abc => dabc
   if (newStartIndex <= newEndIndex) {
     for (let i = newStartIndex; i <= newEndIndex; i++) {
       let childEl = createElm(newChildren[i])
@@ -181,19 +182,7 @@ function updateChildren(el, oldChildren, newChildren) {
       el.insertBefore(childEl, anchor) //anchor为null的是 则会认为是appendChild
     }
   }
-  /**
-   * 
-   * 老的
-   * <li key='a'>a</li>
-     <li key="b">b</li>
-     <li key="c">c</li>
-     <li key="d">d</li>
-   * 
-     新的
-   * <li key='a'>a</li>
-     <li key="b">b</li>
-     <li key="c">c</li>
-  */
+  //  abcd => abc dabc => abc
   if (oldStartIndex <= oldEndIndex) {
     for (let i = oldStartIndex; i <= oldEndIndex; i++) {
       let childEl = oldChildren[i].el
