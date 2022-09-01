@@ -23,7 +23,7 @@ export function initGlobalAPI(Vue) {
     // 子类继承父类
     Sub.prototype = Object.create(Vue.prototype)
     Sub.prototype.constructor = Sub
-    /*Sub.options = options   */ //保存用户传递的选项
+    /*Sub.options = options */ //保存用户传递的选项
     Sub.options = mergeOptions(Vue.options, options) //用户传递的选项和全局的选项合并下
 
     return Sub

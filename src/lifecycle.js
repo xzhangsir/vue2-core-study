@@ -11,8 +11,8 @@ export function initLifeCycle(Vue) {
     // console.log(el)
     // patch  既有初始化的功能 又有更新的功能
     /* vm.$el = patch(el, vnode) */
-    // 把组件第一次产生的虚拟节点保存到_vnode上
     const prevVnode = vm._vnode
+    // 把组件第一次产生的虚拟节点保存到_vnode上
     vm._vnode = vnode
     if (prevVnode) {
       //prevVnode 有值 说明第一次渲染过了

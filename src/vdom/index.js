@@ -1,6 +1,6 @@
 const isReservedTag = (tag) => {
   // 判断是原始标签还是自定义组件的标签
-  return ['a', 'div', 'li', 'button', 'ul', 'span', 'img'].includes(tag)
+  return ['a', 'div', 'li', 'button', 'ul', 'span', 'img', 'p'].includes(tag)
 }
 
 // h() _c()

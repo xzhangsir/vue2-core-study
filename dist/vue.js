@@ -434,7 +434,7 @@
 
       Sub.prototype = Object.create(Vue.prototype);
       Sub.prototype.constructor = Sub;
-      /*Sub.options = options   */
+      /*Sub.options = options */
       //保存用户传递的选项
 
       Sub.options = mergeOptions(Vue.options, options); //用户传递的选项和全局的选项合并下
@@ -702,7 +702,7 @@
 
   var isReservedTag = function isReservedTag(tag) {
     // 判断是原始标签还是自定义组件的标签
-    return ['a', 'div', 'li', 'button', 'ul', 'span', 'img'].includes(tag);
+    return ['a', 'div', 'li', 'button', 'ul', 'span', 'img', 'p'].includes(tag);
   }; // h() _c()
 
 
@@ -1013,9 +1013,9 @@
       // patch  既有初始化的功能 又有更新的功能
 
       /* vm.$el = patch(el, vnode) */
-      // 把组件第一次产生的虚拟节点保存到_vnode上
 
-      var prevVnode = vm._vnode;
+      var prevVnode = vm._vnode; // 把组件第一次产生的虚拟节点保存到_vnode上
+
       vm._vnode = vnode;
 
       if (prevVnode) {
