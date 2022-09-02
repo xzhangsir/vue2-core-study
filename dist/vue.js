@@ -737,7 +737,11 @@
     }
 
     data.hook = {
-      init: function init() {//稍后创建真实节点的时候 如果是组件则调用此方法
+      init: function init(vnode) {
+        //稍后创建真实节点的时候 如果是组件则调用此方法
+        // 保存组件的实例到虚拟节点上
+        var instance = vnode.componentInstance = new vnode.componentOptions.Ctor();
+        instance.$mount(); //实例上就会多一个$el
       }
     };
     return vnode(vm, tag, key, data, children, null, {
@@ -769,6 +773,18 @@
     return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
   }
 
+  function createComponent(vnode) {
+    var i = vnode.data;
+
+    if ((i = i.hook) && (i = i.init)) {
+      i(vnode); //初始化组件
+    }
+
+    if (vnode.componentInstance) {
+      return true; //说明是组件
+    }
+  }
+
   function createElm(vnode) {
     // console.log(vnode)
     var tag = vnode.tag,
@@ -777,8 +793,14 @@
         text = vnode.text;
 
     if (typeof tag === 'string') {
-      //标签
+      // 创建真实元素 也要区分组件还是元素
+      if (createComponent(vnode)) {
+        // 组件  vnode上就有了 componentInstance.$el
+        return vnode.componentInstance.$el;
+      } //标签
       // 将真实节点和虚拟节点对应起来
+
+
       vnode.el = document.createElement(tag);
       patchProps(vnode.el, {}, data);
       children.forEach(function (child) {
@@ -823,8 +845,13 @@
     }
   }
   function patch(oldVNode, vnode) {
-    // console.log(oldVNode, vnode)
+    if (!oldVNode) {
+      // 这就是组件的挂载
+      return createElm(vnode); //vm.$el 对应的就是组件渲染的结果
+    } // console.log(oldVNode, vnode)
     // 初渲染流程
+
+
     var isRealElement = oldVNode.nodeType; // 判断是不是真实元素
 
     if (isRealElement) {
@@ -1371,12 +1398,11 @@
           //没有template 用外部的html
           template = el.outerHTML;
         } else {
-          if (el) {
-            template = ops.template;
-          }
+          // if (el) {
+          template = ops.template; // }
         }
 
-        if (template && el) {
+        if (template) {
           // 对模板进行编译
           var render = compileToFunction(template);
           ops.render = render;

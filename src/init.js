@@ -30,11 +30,11 @@ export function initMixin(Vue) {
         //没有template 用外部的html
         template = el.outerHTML
       } else {
-        if (el) {
-          template = ops.template
-        }
+        // if (el) {
+        template = ops.template
+        // }
       }
-      if (template && el) {
+      if (template) {
         // 对模板进行编译
         const render = compileToFunction(template)
         ops.render = render
