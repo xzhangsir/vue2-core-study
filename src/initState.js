@@ -32,8 +32,24 @@ function initData(vm) {
     return false
   }
   vm._data = data
+
+  // 将data上的属性代理到实例上 vm.msg = vm._data.msg
+  for (let key in data) {
+    proxy(vm, '_data', key)
+  }
   // 对data数据进行劫持
   observer(data)
+}
+
+function proxy(vm, source, key) {
+  Object.defineProperty(vm, key, {
+    get() {
+      return vm[source][key]
+    },
+    set(newVal) {
+      vm[source][key] = newVal
+    }
+  })
 }
 
 function initProps() {}
