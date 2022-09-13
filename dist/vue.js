@@ -211,7 +211,30 @@
       var vm = this;
       vm.$options = options; // 初始化状态
 
-      initState(vm);
+      initState(vm); // 模板渲染
+
+      if (vm.$options.el) {
+        vm.$mount(vm.$options.el);
+      }
+    };
+
+    Vue.prototype.$mount = function (el) {
+      var vm = this;
+      var options = vm.$options;
+
+      if (!options.render) {
+        // 没有render
+        var template = options.template;
+
+        if (!template) {
+          //没有template
+          if (el) {
+            // 获取HTML
+            el = document.querySelector(el).outerHTML;
+            console.log(el);
+          }
+        }
+      }
     };
   }
 

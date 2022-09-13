@@ -8,7 +8,7 @@
   <script  src = "./dist/vue.js"></script>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app">{{msg}}</div>
   <script>
     let vm = new Vue({
       el:"#app",
@@ -16,25 +16,22 @@
         // console.log(this)
         return{
           msg:"hello",
-          a:{
-            b:20
-          },
-          list:[2,4,6,8],
-          arr:[{a:1}]
+          // a:{
+          //   b:20
+          // },
+          // list:[2,4,6,8],
+          // arr:[{a:1}]
         }
       },
     })
-
-    // console.log("vm",vm);
-    // console.log(vm._data)
-    // console.log(vm._data.msg = "world")
-    //  console.log(vm._data.a)
-    //  console.log(vm._data.a = {c:30} )
-    // console.log(vm._data.list.push(100))
-    // console.log(vm._data.arr[0].a = 23)
-    // console.log(vm._data.arr.push({b:2}))
-    console.log(vm.msg)
-    console.log(vm.msg = "100")
+    // vue初次渲染流程：
+    // 先初始化数据
+    // 有render直接使用 没有就对template进行编译
+    // 生成render（）
+    // 生成虚拟节点
+    // 变成真实DOM
+    // 放入页面
   </script>
+  
 </body>
 </html>
