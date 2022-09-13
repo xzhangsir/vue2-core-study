@@ -39,6 +39,46 @@
     return Constructor;
   }
 
+  // 重写数组方法
+  // 1) 获取原来数组的方法
+  var oldArrayProtoMethods = Array.prototype; // 2) 继承
+
+  var ArrayMethods = Object.create(oldArrayProtoMethods); // 3）函数劫持
+
+  var methods = ['push', 'pop', 'unshift', 'shift', 'splice', 'sort', 'reverse'];
+  methods.forEach(function (method) {
+    ArrayMethods[method] = function () {
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      console.log('数组劫持', args);
+      var result = oldArrayProtoMethods[method].apply(this, args); // 对数组中新增的数据 进行劫持
+
+      var inserted; //新增的内容
+
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+
+        case 'splice':
+          inserted = args.slice(2);
+          break;
+      }
+
+      var ob = this.__ob__;
+
+      if (inserted) {
+        // 对新增的内容进行劫持
+        ob.observeArray(inserted);
+      }
+
+      return result;
+    };
+  });
+
   function observer(data) {
     if (_typeof(data) !== 'object' || data === null) {
       // data不是对象或者data为空 不劫持
@@ -53,7 +93,23 @@
     function Observer(value) {
       _classCallCheck(this, Observer);
 
-      this.walk(value);
+      // 给 value 添加一个属性
+      Object.defineProperty(value, '__ob__', {
+        enumerable: false,
+        //不可枚举
+        value: this
+      }); // value.__ob__ = this //副作用 给数据加了一个标识上有__ob__ 则说明这个属性被观测过
+      // 判断是不是数组
+
+      if (Array.isArray(value)) {
+        console.log('数组', value); // 重写数组 的部分方法
+
+        value.__proto__ = ArrayMethods; // 数组里面包含对象
+
+        this.observeArray(value); //[{a:1}]
+      } else {
+        this.walk(value);
+      }
     }
 
     _createClass(Observer, [{
@@ -68,6 +124,13 @@
           defineReactive(data, key, value);
         }
       }
+    }, {
+      key: "observeArray",
+      value: function observeArray(arr) {
+        for (var i = 0; i < arr.length; i++) {
+          observer(arr[i]);
+        }
+      }
     }]);
 
     return Observer;
@@ -79,11 +142,11 @@
 
     Object.defineProperty(data, key, {
       get: function get() {
-        console.log('获取');
+        console.log('获取', key);
         return value;
       },
       set: function set(newVal) {
-        console.log('设置');
+        console.log('设置', newVal);
         if (newVal === value) return;
         observer(newVal); //对设置的值 进行劫持
 

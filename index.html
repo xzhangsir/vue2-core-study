@@ -18,7 +18,9 @@
           msg:"hello",
           a:{
             b:20
-          }
+          },
+          list:[2,4,6,8],
+          arr:[{a:1}]
         }
       },
     })
@@ -26,8 +28,11 @@
     // console.log("vm",vm);
     // console.log(vm._data)
     // console.log(vm._data.msg = "world")
-     console.log(vm._data.a)
-     console.log(vm._data.a = {c:30} )
+    //  console.log(vm._data.a)
+    //  console.log(vm._data.a = {c:30} )
+    // console.log(vm._data.list.push(100))
+    // console.log(vm._data.arr[0].a = 23)
+    console.log(vm._data.arr.push({b:2}))
   </script>
 </body>
 </html>
