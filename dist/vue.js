@@ -17,19 +17,63 @@
 
   var startTagClose = /^\s*(\/?)>/; // {{}}
 
+  function createASTElement(tag, attrs) {
+    return {
+      tag: tag,
+      //元素
+      attrs: attrs,
+      //属性
+      children: [],
+      //子节点
+      type: 1,
+      //元素类型(标签 1)
+      parent: null
+    };
+  }
+
+  var root; //根元素
+
+  var currentParent; //当前的父亲
+
+  var stack = [];
+
   function start(tag, attrs) {
     // 开始标签
     console.log('开始标签', tag, attrs);
+    var element = createASTElement(tag, attrs);
+
+    if (!root) {
+      root = element;
+    }
+
+    currentParent = element;
+    stack.push(element);
   }
 
   function charts(text) {
     // 文本
     console.log('文本', text);
+    text = text.replace(/s/g, '');
+
+    if (text) {
+      currentParent.children.push({
+        type: 3,
+        //元素类型(文本 3)
+        text: text
+      });
+    }
   }
 
   function end(tag) {
     // 结束标签
     console.log('结束标签', tag);
+    var element = stack.pop();
+    currentParent = stack[stack.length - 1];
+
+    if (currentParent) {
+      element.parent = currentParent.tag;
+      currentParent.children.push(element);
+    }
   }
 
   function parseHTML(html) {
@@ -67,7 +111,6 @@
       }
 
       if (text) {
-        // console.log(text)
         advance(text.length);
       }
     }
@@ -108,6 +151,9 @@
     function advance(n) {
       html = html.substring(n); // console.log(html)
     }
+
+    console.log(root);
+    return root;
   }
 
   function compileToFunction(el) {
