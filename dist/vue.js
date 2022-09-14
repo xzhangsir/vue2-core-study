@@ -4,6 +4,117 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  // 标签名
+  var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*"; // <span:xx>
+
+  var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")"); // 开始标签
+
+  var startTagOpen = new RegExp("^<".concat(qnameCapture)); // 结束标签
+
+  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>")); // 属性  第一个分组是属性的key  value在分组 3/4/5中
+
+  var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // <br/>
+
+  var startTagClose = /^\s*(\/?)>/; // {{}}
+
+  function start(tag, attrs) {
+    // 开始标签
+    console.log('开始标签', tag, attrs);
+  }
+
+  function charts(text) {
+    // 文本
+    console.log('文本', text);
+  }
+
+  function end(tag) {
+    // 结束标签
+    console.log('结束标签', tag);
+  }
+
+  function parseHTML(html) {
+    while (html) {
+      // 判断标签
+      var textEnd = html.indexOf('<');
+
+      if (textEnd === 0) {
+        // 1) 开始标签
+        var startTagMatch = parseStartTag();
+
+        if (startTagMatch) {
+          start(startTagMatch.tagName, startTagMatch.attrs);
+          continue;
+        } // 2) 结束标签
+
+
+        var endTagMatch = html.match(endTag); // console.log(endTagMatch)
+
+        if (endTagMatch) {
+          advance(endTagMatch[0].length);
+          end(endTagMatch[1]);
+          continue;
+        }
+      } // 文本
+
+
+      var text = void 0;
+
+      if (textEnd > 0) {
+        // console.log(textEnd)
+        // 获取文本内容
+        text = html.substring(0, textEnd);
+        charts(text); // console.log(text)
+      }
+
+      if (text) {
+        // console.log(text)
+        advance(text.length);
+      }
+    }
+
+    function parseStartTag() {
+      var start = html.match(startTagOpen);
+
+      if (start) {
+        // console.log(start)
+        // 创建ast语法树
+        var match = {
+          tagName: start[1],
+          attrs: []
+        }; // 删除开始标签 <div
+
+        advance(start[0].length);
+
+        var attr, _end; // 处理属性
+
+
+        while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+          match.attrs.push({
+            name: attr[1],
+            value: attr[3] || attr[4] || attr[5]
+          }); // 删除属性
+
+          advance(attr[0].length); // break
+        }
+
+        if (_end) {
+          // 删掉 >
+          advance(_end[0].length);
+          return match;
+        }
+      }
+    }
+
+    function advance(n) {
+      html = html.substring(n); // console.log(html)
+    }
+  }
+
+  function compileToFunction(el) {
+    console.log(el);
+    parseHTML(el);
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -230,8 +341,9 @@
           //没有template
           if (el) {
             // 获取HTML
-            el = document.querySelector(el).outerHTML;
-            console.log(el);
+            el = document.querySelector(el).outerHTML; // 变成ast语法树
+
+            compileToFunction(el); // render()
           }
         }
       }

@@ -1,3 +1,4 @@
+import { compileToFunction } from './compile/index'
 import { initState } from './initState'
 
 export function initMixin(Vue) {
@@ -24,7 +25,9 @@ export function initMixin(Vue) {
         if (el) {
           // 获取HTML
           el = document.querySelector(el).outerHTML
-          console.log(el)
+          // 变成ast语法树
+          let ast = compileToFunction(el)
+          // render()
         }
       }
     }
