@@ -7,8 +7,11 @@ export function compileToFunction(el) {
   let ast = parseHTML(el)
   console.log('ast', ast)
   // 2） 将ast语法树变成render函数
+  // _c 元素 _v 文本 _s 是表达式
   // 2-1)ast语法树变成字符串
-  // 2-2)字符串变成函数
   let code = generate(ast)
   console.log('code', code)
+  // 2-2)字符串变成函数
+  let render = new Function(`with(this){return ${code}}`)
+  console.log('render', render)
 }

@@ -98,51 +98,6 @@
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
-  /**
-   *
-   * <div id="app" class="add num">xin {{msg}}<span>988</span></div>
-   * _c(div,{id:app},_v('xin' + _s(msg)),_c)
-   *
-   *
-   */
-  function genPorps(attrs) {
-    // console.log(attrs)
-    var str = '';
-
-    for (var i = 0; i < attrs.length; i++) {
-      var attr = attrs[i];
-
-      if (attr.name === 'style') {
-        (function () {
-          var obj = {};
-          attr.value.split(';').forEach(function (item) {
-            if (item) {
-              var _item$split = item.split(':'),
-                  _item$split2 = _slicedToArray(_item$split, 2),
-                  key = _item$split2[0],
-                  value = _item$split2[1];
-
-              obj[key] = value;
-            }
-          }); // style="color:#f00;font-size:20px;"
-          //          ||
-          // {color: '#f00', font-size: '20px'}
-
-          attr.value = obj;
-        })();
-      }
-
-      str += "".concat(attr.name, ":").concat(JSON.stringify(attr.value), ",");
-    }
-
-    return "{".concat(str.slice(0, -1), "}");
-  }
-
-  function generate(ast) {
-    var code = "_c(".concat(ast.tag, ",").concat(ast.attrs.length ? "".concat(genPorps(ast.attrs)) : null, ")");
-    console.log(code);
-  }
-
   // 标签名
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*"; // <span:xx>
 
@@ -155,6 +110,8 @@
   var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/; // <br/>
 
   var startTagClose = /^\s*(\/?)>/; // {{}}
+
+  var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // 创建一个ast对象
 
   function createASTElement(tag, attrs) {
     return {
@@ -192,7 +149,7 @@
   function charts(text) {
     // 文本
     // console.log('文本', text)
-    text = text.replace(/s/g, '');
+    text = text.replace(/\s/g, '');
 
     if (text) {
       currentParent.children.push({
@@ -295,16 +252,113 @@
     return root;
   }
 
+  function genPorps(attrs) {
+    // console.log(attrs)
+    var str = '';
+
+    for (var i = 0; i < attrs.length; i++) {
+      var attr = attrs[i];
+
+      if (attr.name === 'style') {
+        (function () {
+          var obj = {};
+          attr.value.split(';').forEach(function (item) {
+            if (item) {
+              var _item$split = item.split(':'),
+                  _item$split2 = _slicedToArray(_item$split, 2),
+                  key = _item$split2[0],
+                  value = _item$split2[1];
+
+              obj[key] = value;
+            }
+          }); // style="color:#f00;font-size:20px;"
+          //          ||
+          // {color: '#f00', font-size: '20px'}
+
+          attr.value = obj;
+        })();
+      }
+
+      str += "".concat(attr.name, ":").concat(JSON.stringify(attr.value), ",");
+    }
+
+    return "{".concat(str.slice(0, -1), "}");
+  } // 处理子节点
+
+
+  function genChildren(ast) {
+    var children = ast.children;
+
+    if (children) {
+      return children.map(function (child) {
+        return gen(child);
+      }).join(',');
+    }
+
+    return null;
+  }
+
+  function gen(node) {
+    // 文本 或者 标签
+    if (node.type === 1) {
+      // 标签
+      return generate(node);
+    } else if (node.type === 3) {
+      // 文本  （纯文本和插值表达式）
+      var text = node.text;
+
+      if (!defaultTagRE.test(text)) {
+        // 没有插值的纯文本
+        return "_v(".concat(JSON.stringify(text), ")");
+      } else {
+        // 有插值表达式
+        var tokens = [];
+        var lastIndex = defaultTagRE.lastIndex = 0;
+        var match;
+
+        while (match = defaultTagRE.exec(text)) {
+          // console.log('match', match)
+          var index = match.index;
+
+          if (index > lastIndex) {
+            // 添加内容
+            tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+          }
+
+          tokens.push("_s(".concat(match[1].trim(), ")"));
+          lastIndex = index + match[0].length;
+        }
+
+        if (lastIndex < text.length) {
+          tokens.push(JSON.stringify(text.slice(lastIndex)));
+        } // console.log(tokens)
+
+
+        return "_v(".concat(tokens.join('+'), ")");
+      }
+    }
+  }
+
+  function generate(ast) {
+    var children = genChildren(ast);
+    var code = "_c(".concat(ast.tag, ",").concat(ast.attrs.length ? "".concat(genPorps(ast.attrs)) : null, ",").concat(children, ")");
+    console.log(code);
+    return code;
+  }
+
   function compileToFunction(el) {
     console.log(el); // 1） 将HTML 变成 ast语法树
 
     var ast = parseHTML(el);
     console.log('ast', ast); // 2） 将ast语法树变成render函数
+    // _c 元素 _v 文本 _s 是表达式
     // 2-1)ast语法树变成字符串
-    // 2-2)字符串变成函数
 
     var code = generate(ast);
-    console.log('code', code);
+    console.log('code', code); // 2-2)字符串变成函数
+
+    var render = new Function("with(this){return ".concat(code, "}"));
+    console.log('render', render);
   }
 
   // 重写数组方法

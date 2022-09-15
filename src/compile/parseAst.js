@@ -12,7 +12,7 @@ const attribute =
 // <br/>
 const startTagClose = /^\s*(\/?)>/
 // {{}}
-const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
+export const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
 
 // 创建一个ast对象
 function createASTElement(tag, attrs) {
@@ -42,7 +42,7 @@ function start(tag, attrs) {
 function charts(text) {
   // 文本
   // console.log('文本', text)
-  text = text.replace(/s/g, '')
+  text = text.replace(/\s/g, '')
   if (text) {
     currentParent.children.push({
       type: 3, //元素类型(文本 3)
