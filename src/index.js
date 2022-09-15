@@ -1,4 +1,6 @@
 import { initMixin } from './init'
+import { lifecycleMixin } from './lifecycle'
+import { renderMixin } from './vnode/index'
 
 function Vue(options) {
   // 初始化
@@ -6,5 +8,7 @@ function Vue(options) {
 }
 
 initMixin(Vue)
+lifecycleMixin(Vue)
+renderMixin(Vue)
 
 export default Vue

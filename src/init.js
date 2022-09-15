@@ -1,5 +1,6 @@
 import { compileToFunction } from './compile/index'
 import { initState } from './initState'
+import { mounetComponent } from './lifecycle'
 
 export function initMixin(Vue) {
   Vue.prototype._init = function (options) {
@@ -25,11 +26,14 @@ export function initMixin(Vue) {
         if (el) {
           // 获取HTML
           el = document.querySelector(el).outerHTML
-          // 变成ast语法树
-          let ast = compileToFunction(el)
-          // render()
+          // 先变成ast语法树 再转为redner函数
+          let render = compileToFunction(el)
+          console.log(render)
+          options.render = render
         }
       }
+      // 挂载组件
+      mounetComponent(vm, el)
     }
   }
 }

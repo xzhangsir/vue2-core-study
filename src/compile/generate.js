@@ -77,9 +77,9 @@ function gen(node) {
 export function generate(ast) {
   let children = genChildren(ast)
 
-  let code = `_c(${ast.tag},${
-    ast.attrs.length ? `${genPorps(ast.attrs)}` : null
+  let code = `_c('${ast.tag}',${
+    ast.attrs.length ? `${genPorps(ast.attrs)}` : undefined
   },${children})`
-  console.log(code)
+  // console.log(code)
   return code
 }

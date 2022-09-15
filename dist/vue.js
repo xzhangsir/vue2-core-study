@@ -341,24 +341,25 @@
 
   function generate(ast) {
     var children = genChildren(ast);
-    var code = "_c(".concat(ast.tag, ",").concat(ast.attrs.length ? "".concat(genPorps(ast.attrs)) : null, ",").concat(children, ")");
-    console.log(code);
+    var code = "_c('".concat(ast.tag, "',").concat(ast.attrs.length ? "".concat(genPorps(ast.attrs)) : undefined, ",").concat(children, ")"); // console.log(code)
+
     return code;
   }
 
   function compileToFunction(el) {
     console.log(el); // 1） 将HTML 变成 ast语法树
 
-    var ast = parseHTML(el);
-    console.log('ast', ast); // 2） 将ast语法树变成render函数
+    var ast = parseHTML(el); // console.log('ast', ast)
+    // 2） 将ast语法树变成render函数
     // _c 元素 _v 文本 _s 是表达式
     // 2-1)ast语法树变成字符串
 
-    var code = generate(ast);
-    console.log('code', code); // 2-2)字符串变成函数
+    var code = generate(ast); // console.log('code', code)
+    // 2-2)字符串变成函数
 
-    var render = new Function("with(this){return ".concat(code, "}"));
-    console.log('render', render);
+    var render = new Function("with(this){return ".concat(code, "}")); // console.log('render', render)
+
+    return render;
   }
 
   // 重写数组方法
@@ -527,6 +528,16 @@
     });
   }
 
+  function mounetComponent(vm, el) {
+    //vm._render 1）将render函数 变成vnode
+    //vm._update 2）将vnode变成真实DOM 放到页面中
+    vm._update(vm._render());
+  }
+  function lifecycleMixin(Vue) {
+    Vue.prototype._update = function (vnode) {// vnode变成真实DOM
+    };
+  }
+
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       // console.log('options', options)
@@ -552,12 +563,80 @@
           //没有template
           if (el) {
             // 获取HTML
-            el = document.querySelector(el).outerHTML; // 变成ast语法树
+            el = document.querySelector(el).outerHTML; // 先变成ast语法树 再转为redner函数
 
-            compileToFunction(el); // render()
+            var render = compileToFunction(el);
+            console.log(render);
+            options.render = render;
           }
-        }
+        } // 挂载组件
+
+
+        mounetComponent(vm);
       }
+    };
+  }
+
+  function renderMixin(Vue) {
+    Vue.prototype._c = function () {
+      // 标签
+      // 创建标签
+      // console.log(arguments)
+      return createElement.apply(void 0, arguments);
+    };
+
+    Vue.prototype._v = function (text) {
+      // 文本
+      // 创建文本
+      return createText(text);
+    };
+
+    Vue.prototype._s = function (val) {
+      // 插值表达式
+      if (val) {
+        if (_typeof(val) === 'object') {
+          return JSON.stringify(val);
+        }
+
+        return val;
+      }
+
+      return '';
+    };
+
+    Vue.prototype._render = function () {
+      // 将render函数 变成vnode
+      var vm = this;
+      var render = vm.$options.render;
+      var vnode = render.call(vm);
+      console.log('vnode', vnode);
+      return vnode;
+    };
+  } // 创建元素
+
+  function createElement(tag) {
+    var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+    for (var _len = arguments.length, children = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+      children[_key - 2] = arguments[_key];
+    }
+
+    return vnode(tag, data, data.key, children);
+  } // 创建文本
+
+
+  function createText(text) {
+    return vnode(undefined, undefined, undefined, undefined, text);
+  } // 创建虚拟node
+
+
+  function vnode(tag, data, key, children, text) {
+    return {
+      tag: tag,
+      data: data,
+      key: key,
+      children: children,
+      text: text
     };
   }
 
@@ -567,6 +646,8 @@
   }
 
   initMixin(Vue);
+  lifecycleMixin(Vue);
+  renderMixin(Vue);
 
   return Vue;
 
