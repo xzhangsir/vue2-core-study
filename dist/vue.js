@@ -619,11 +619,19 @@
       }
 
       this.get();
-    }
+    } // 初次渲染
+
 
     _createClass(watcher, [{
       key: "get",
       value: function get() {
+
+        this.getter(); //渲染页面
+      } // 更新
+
+    }, {
+      key: "update",
+      value: function update() {
         this.getter();
       }
     }]);
