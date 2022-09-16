@@ -2,7 +2,7 @@ import { generate } from './generate'
 import { parseHTML } from './parseAst'
 
 export function compileToFunction(el) {
-  console.log(el)
+  // console.log(el)
   // 1） 将HTML 变成 ast语法树
   let ast = parseHTML(el)
   // console.log('ast', ast)

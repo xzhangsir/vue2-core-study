@@ -5,7 +5,7 @@ export function observer(data) {
     return data
   }
 
-  console.log('劫持data:', data)
+  // console.log('劫持data:', data)
   return new Observer(data)
 }
 
@@ -50,11 +50,11 @@ function defineReactive(data, key, value) {
   observer(value) //深度递归劫持
   Object.defineProperty(data, key, {
     get() {
-      console.log('获取', key)
+      // console.log('获取', key)
       return value
     },
     set(newVal) {
-      console.log('设置', newVal)
+      // console.log('设置', newVal)
       if (newVal === value) return
       observer(newVal) //对设置的值 进行劫持
       value = newVal

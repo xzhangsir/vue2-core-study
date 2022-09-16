@@ -9,7 +9,7 @@ let methods = ['push', 'pop', 'unshift', 'shift', 'splice', 'sort', 'reverse']
 
 methods.forEach((method) => {
   ArrayMethods[method] = function (...args) {
-    console.log('数组劫持', args)
+    // console.log('数组劫持', args)
     const result = oldArrayProtoMethods[method].apply(this, args)
     // 对数组中新增的数据 进行劫持
     let inserted //新增的内容

@@ -10,6 +10,15 @@
 <body>
   <div id="app" class = "add num" style = "color:#f00;font-size:20px;">{{msg}}xin{{aa}}xin <span>988{{ss}}</span><h1>99</h1></div>
   <script>
+     Vue.mixin({
+      created:function a (){
+        console.log("a")
+
+      },
+      mounted:function m1(){
+        console.log("m1")
+      }
+    })
     let vm = new Vue({
       el:"#app",
       data(){
@@ -25,15 +34,19 @@
           // arr:[{a:1}]
         }
       },
+      created(){
+        console.log("main")
+      }
     })
+    
+ 
     // vue初次渲染流程：
     // 先初始化数据
-    // 有render直接使用 没有就对template进行编译
+    // 有render直接使用 没有就对template进行编译为ast
     // 生成render（）
     // 生成虚拟节点
     // 变成真实DOM
     // 放入页面
   </script>
-  
 </body>
 </html>

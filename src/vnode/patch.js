@@ -2,7 +2,7 @@ export function patch(oldVnode, vnode) {
   // vnode ->真实dom
   // 1）创建新dom
   let el = createEl(vnode)
-  console.log(el)
+  // console.log(el)
   // 2) 新dom替换旧dom
   let parentEL = oldVnode.parentNode
   parentEL.insertBefore(el, oldVnode.nextsibling)

@@ -4,6 +4,83 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  var HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestory', 'destroyed']; // 策略模式
+
+  var starts = {};
+
+  starts.data = function (parentVal, childVal) {
+    // 合并data
+    return childVal;
+  };
+
+  starts.computed = function () {// 合并computed
+  };
+
+  starts.watch = function () {// 合并watch
+  };
+
+  HOOKS.forEach(function (hooks) {
+    starts[hooks] = mergeHook;
+  });
+
+  function mergeHook(parentVal, childVal) {
+    // console.log(parentVal, childVal)
+    if (childVal) {
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+
+  function mergeOptions(parent, child) {
+    // 合并对象
+    // console.log(parent, child)
+    var options = {}; // 父亲
+
+    for (var key in parent) {
+      mergeField(key);
+    } // 儿子有
+
+
+    for (var _key in child) {
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+
+    function mergeField(key) {
+      // 策略模式
+      if (starts[key]) {
+        options[key] = starts[key](parent[key], child[key]);
+      } else {
+        options[key] = child[key] || parent[key];
+      }
+    } // console.log('options', options)
+
+
+    return options;
+  }
+
+  function initGlobApi(Vue) {
+    // created:[a,b,c]
+    // watch:[a,b]
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      // console.log(this)
+      // 对象的合并
+      // console.log(Vue.options)
+      // console.log(mixin)
+      this.options = mergeOptions(this.options, mixin); // console.log(this.options)
+
+      return this;
+    };
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -347,8 +424,8 @@
   }
 
   function compileToFunction(el) {
-    console.log(el); // 1） 将HTML 变成 ast语法树
-
+    // console.log(el)
+    // 1） 将HTML 变成 ast语法树
     var ast = parseHTML(el); // console.log('ast', ast)
     // 2） 将ast语法树变成render函数
     // _c 元素 _v 文本 _s 是表达式
@@ -375,7 +452,7 @@
         args[_key] = arguments[_key];
       }
 
-      console.log('数组劫持', args);
+      // console.log('数组劫持', args)
       var result = oldArrayProtoMethods[method].apply(this, args); // 对数组中新增的数据 进行劫持
 
       var inserted; //新增的内容
@@ -406,9 +483,9 @@
     if (_typeof(data) !== 'object' || data === null) {
       // data不是对象或者data为空 不劫持
       return data;
-    }
+    } // console.log('劫持data:', data)
 
-    console.log('劫持data:', data);
+
     return new Observer(data);
   }
 
@@ -465,11 +542,11 @@
 
     Object.defineProperty(data, key, {
       get: function get() {
-        console.log('获取', key);
+        // console.log('获取', key)
         return value;
       },
       set: function set(newVal) {
-        console.log('设置', newVal);
+        // console.log('设置', newVal)
         if (newVal === value) return;
         observer(newVal); //对设置的值 进行劫持
 
@@ -531,8 +608,8 @@
   function patch(oldVnode, vnode) {
     // vnode ->真实dom
     // 1）创建新dom
-    var el = createEl(vnode);
-    console.log(el); // 2) 新dom替换旧dom
+    var el = createEl(vnode); // console.log(el)
+    // 2) 新dom替换旧dom
 
     var parentEL = oldVnode.parentNode;
     parentEL.insertBefore(el, oldVnode.nextsibling);
@@ -597,27 +674,49 @@
   }
 
   function mounetComponent(vm, el) {
-    //vm._render 1）将render函数 变成vnode
+    callHook(vm, 'beforeMount'); //vm._render 1）将render函数 变成vnode
     //vm._update 2）将vnode变成真实DOM 放到页面中
+
     vm._update(vm._render());
+
+    callHook(vm, 'mounted');
   }
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       // vnode变成真实DOM
-      var vm = this;
-      console.log(vm); // 旧dom  虚拟dom
+      var vm = this; // console.log(vm)
+      // 旧dom  虚拟dom
 
       vm.$el = patch(vm.$el, vnode);
     };
+  } // 生命周期的调用
+
+  function callHook(vm, hook) {
+    // console.log(vm)
+    var handlers = vm.$options[hook]; // console.log(hook)
+    // console.log(handlers)
+
+    if (handlers) {
+      for (var i = 0; i < handlers.length; i++) {
+        handlers[i].call(vm);
+      }
+    }
   }
 
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       // console.log('options', options)
-      var vm = this;
-      vm.$options = options; // 初始化状态
+      var vm = this; // vm.$options = options
+      // console.log(Vue.options)
 
-      initState(vm); // 模板渲染
+      vm.$options = mergeOptions(Vue.options, options); // console.log(vm.$options)
+      // callHook
+
+      callHook(vm, 'beforeCreate'); // 初始化状态
+
+      initState(vm);
+      callHook(vm, 'created'); // console.log(vm)
+      // 模板渲染
 
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
@@ -640,8 +739,8 @@
             // 获取HTML
             el = el.outerHTML; // 先变成ast语法树 再转为redner函数
 
-            var render = compileToFunction(el);
-            console.log(render);
+            var render = compileToFunction(el); // console.log(render)
+
             options.render = render;
           }
         } // 挂载组件
@@ -683,8 +782,8 @@
       // 将render函数 变成vnode
       var vm = this;
       var render = vm.$options.render;
-      var vnode = render.call(vm);
-      console.log('vnode', vnode);
+      var vnode = render.call(vm); // console.log('vnode', vnode)
+
       return vnode;
     };
   } // 创建元素
@@ -723,6 +822,7 @@
   initMixin(Vue);
   lifecycleMixin(Vue);
   renderMixin(Vue);
+  initGlobApi(Vue);
 
   return Vue;
 
