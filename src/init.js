@@ -17,6 +17,8 @@ export function initMixin(Vue) {
 
   Vue.prototype.$mount = function (el) {
     let vm = this
+    el = document.querySelector(el)
+    vm.$el = el
     let options = vm.$options
     if (!options.render) {
       // 没有render
@@ -25,7 +27,7 @@ export function initMixin(Vue) {
         //没有template
         if (el) {
           // 获取HTML
-          el = document.querySelector(el).outerHTML
+          el = el.outerHTML
           // 先变成ast语法树 再转为redner函数
           let render = compileToFunction(el)
           console.log(render)

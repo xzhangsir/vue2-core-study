@@ -528,13 +528,86 @@
     });
   }
 
+  function patch(oldVnode, vnode) {
+    // vnode ->真实dom
+    // 1）创建新dom
+    var el = createEl(vnode);
+    console.log(el); // 2) 新dom替换旧dom
+
+    var parentEL = oldVnode.parentNode;
+    parentEL.insertBefore(el, oldVnode.nextsibling);
+    parentEL.removeChild(oldVnode);
+    return el;
+  } // 创建dom
+
+  function createEl(vnode) {
+    var tag = vnode.tag,
+        children = vnode.children;
+        vnode.key;
+        var data = vnode.data,
+        text = vnode.text;
+
+    if (typeof tag === 'string') {
+      // 是标签  创建元素
+      vnode.el = document.createElement(tag);
+      patchProps(vnode.el, {}, data);
+
+      if (children.length > 0) {
+        children.forEach(function (child) {
+          vnode.el.appendChild(createEl(child));
+        });
+      }
+    } else {
+      vnode.el = document.createTextNode(text);
+    }
+
+    return vnode.el;
+  }
+
+  function patchProps(el) {
+    var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    // 老的属性中有 新的没有 要删除老的  样式和其它属性
+    var oldStyles = oldProps.style || {};
+    var newStyles = props.style || {};
+
+    for (var key in oldStyles) {
+      if (!newStyles[key]) {
+        el.style[key] = '';
+      }
+    }
+
+    for (var _key in oldProps) {
+      if (!props[_key]) {
+        el.removeAttribute(_key);
+      }
+    } // 新的覆盖老的
+    // console.log('props', props)
+
+
+    for (var _key2 in props) {
+      if (_key2 === 'style') {
+        for (var styleName in props.style) {
+          el.style[styleName] = props.style[styleName];
+        }
+      } else {
+        el.setAttribute(_key2, props[_key2]);
+      }
+    }
+  }
+
   function mounetComponent(vm, el) {
     //vm._render 1）将render函数 变成vnode
     //vm._update 2）将vnode变成真实DOM 放到页面中
     vm._update(vm._render());
   }
   function lifecycleMixin(Vue) {
-    Vue.prototype._update = function (vnode) {// vnode变成真实DOM
+    Vue.prototype._update = function (vnode) {
+      // vnode变成真实DOM
+      var vm = this;
+      console.log(vm); // 旧dom  虚拟dom
+
+      vm.$el = patch(vm.$el, vnode);
     };
   }
 
@@ -553,6 +626,8 @@
 
     Vue.prototype.$mount = function (el) {
       var vm = this;
+      el = document.querySelector(el);
+      vm.$el = el;
       var options = vm.$options;
 
       if (!options.render) {
@@ -563,7 +638,7 @@
           //没有template
           if (el) {
             // 获取HTML
-            el = document.querySelector(el).outerHTML; // 先变成ast语法树 再转为redner函数
+            el = el.outerHTML; // 先变成ast语法树 再转为redner函数
 
             var render = compileToFunction(el);
             console.log(render);
