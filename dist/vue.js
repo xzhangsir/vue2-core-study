@@ -605,6 +605,32 @@
     });
   }
 
+  var watcher = /*#__PURE__*/function () {
+    function watcher(vm, updateComponent, cb, options) {
+      _classCallCheck(this, watcher);
+
+      this.vm = vm;
+      this.exprOrfn = updateComponent;
+      this.cb = cb;
+      this.options = options;
+
+      if (typeof updateComponent === 'function') {
+        this.getter = updateComponent; //更新视图
+      }
+
+      this.get();
+    }
+
+    _createClass(watcher, [{
+      key: "get",
+      value: function get() {
+        this.getter();
+      }
+    }]);
+
+    return watcher;
+  }();
+
   function patch(oldVnode, vnode) {
     // vnode ->真实dom
     // 1）创建新dom
@@ -674,17 +700,25 @@
   }
 
   function mounetComponent(vm, el) {
-    callHook(vm, 'beforeMount'); //vm._render 1）将render函数 变成vnode
+    callHook(vm, 'beforeMount');
+    /* 
+    //vm._render 1）将render函数 变成vnode
     //vm._update 2）将vnode变成真实DOM 放到页面中
+    vm._update(vm._render()) 
+    */
 
-    vm._update(vm._render());
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
 
+    new watcher(vm, updateComponent, function () {}, true);
     callHook(vm, 'mounted');
   }
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       // vnode变成真实DOM
-      var vm = this; // console.log(vm)
+      var vm = this;
+      console.log(vnode); // console.log(vm)
       // 旧dom  虚拟dom
 
       vm.$el = patch(vm.$el, vnode);
