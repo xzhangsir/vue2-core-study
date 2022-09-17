@@ -22,7 +22,7 @@ export function lifecycleMixin(Vue) {
     // vnode变成真实DOM
     let vm = this
     // console.log(vnode)
-    // console.log(vm)
+    console.log(vm)
     // 旧dom  虚拟dom
     vm.$el = patch(vm.$el, vnode)
   }

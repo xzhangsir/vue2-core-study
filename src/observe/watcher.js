@@ -14,6 +14,9 @@ class watcher {
     }
     this.get()
   }
+  run() {
+    this.getter()
+  }
   // 初次渲染
   get() {
     pushTarget(this) //给dep添加watcher
@@ -31,7 +34,31 @@ class watcher {
   }
   // 更新
   update() {
-    this.getter()
+    // this.getter()
+    // 多次调用update 只执行一次 缓存
+    queueWatcher(this)
+  }
+}
+
+// 将需要批量更新的watcher存放到队列中
+let queue = []
+let has = {}
+let pending = false
+function queueWatcher(watcher) {
+  let id = watcher.id
+  // console.log(id)
+  if (!has[id]) {
+    queue.push(watcher)
+    has[id] = true
+    if (!pending) {
+      pending = true
+      setTimeout(() => {
+        queue.forEach((watcher) => watcher.run())
+        queue = []
+        has = {}
+        pending = false
+      })
+    }
   }
 }
 

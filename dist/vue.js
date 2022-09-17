@@ -688,10 +688,15 @@
       }
 
       this.get();
-    } // 初次渲染
-
+    }
 
     _createClass(watcher, [{
+      key: "run",
+      value: function run() {
+        this.getter();
+      } // 初次渲染
+
+    }, {
       key: "get",
       value: function get() {
         pushTarget(this); //给dep添加watcher
@@ -716,12 +721,40 @@
     }, {
       key: "update",
       value: function update() {
-        this.getter();
+        // this.getter()
+        // 多次调用update 只执行一次 缓存
+        queueWatcher(this);
       }
     }]);
 
     return watcher;
-  }();
+  }(); // 将需要批量更新的watcher存放到队列中
+
+
+  var queue = [];
+  var has = {};
+  var pending = false;
+
+  function queueWatcher(watcher) {
+    var id = watcher.id; // console.log(id)
+
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true;
+
+      if (!pending) {
+        pending = true;
+        setTimeout(function () {
+          queue.forEach(function (watcher) {
+            return watcher.run();
+          });
+          queue = [];
+          has = {};
+          pending = false;
+        });
+      }
+    }
+  }
 
   function patch(oldVnode, vnode) {
     // vnode ->真实dom
@@ -810,8 +843,8 @@
     Vue.prototype._update = function (vnode) {
       // vnode变成真实DOM
       var vm = this; // console.log(vnode)
-      // console.log(vm)
-      // 旧dom  虚拟dom
+
+      console.log(vm); // 旧dom  虚拟dom
 
       vm.$el = patch(vm.$el, vnode);
     };
