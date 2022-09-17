@@ -12,6 +12,8 @@ export function observer(data) {
 
 class Observer {
   constructor(value) {
+    // console.log('value', value)
+    this.dep = new Dep()
     // 给 value 添加一个属性
     Object.defineProperty(value, '__ob__', {
       enumerable: false, //不可枚举
@@ -32,7 +34,6 @@ class Observer {
   }
   walk(data) {
     let keys = Object.keys(data)
-    // console.log('keys', keys)
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i]
       const value = data[key]
@@ -48,16 +49,21 @@ class Observer {
 }
 // 对对象中的属性进行劫持
 function defineReactive(data, key, value) {
-  observer(value) //深度递归劫持
+  let childDep = observer(value) //深度递归劫持
   let dep = new Dep() //给每个属性添加一个dep
   Object.defineProperty(data, key, {
     get() {
-      console.log('获取', key)
+      // console.log('childDep', childDep)
+      // console.log('获取', key)
       // 收集依赖
       if (Dep.target) {
         dep.depend()
+        // 让数组和对象本身也实现依赖收集
+        if (childDep.dep) {
+          childDep.dep.depend()
+        }
       }
-      console.log(dep)
+      // console.log(dep)
       return value
     },
     set(newVal) {

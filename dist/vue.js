@@ -475,6 +475,7 @@
         ob.observeArray(inserted);
       }
 
+      ob.dep.notify();
       return result;
     };
   });
@@ -539,7 +540,9 @@
     function Observer(value) {
       _classCallCheck(this, Observer);
 
-      // 给 value 添加一个属性
+      // console.log('value', value)
+      this.dep = new Dep(); // 给 value 添加一个属性
+
       Object.defineProperty(value, '__ob__', {
         enumerable: false,
         //不可枚举
@@ -561,7 +564,7 @@
     _createClass(Observer, [{
       key: "walk",
       value: function walk(data) {
-        var keys = Object.keys(data); // console.log('keys', keys)
+        var keys = Object.keys(data);
 
         for (var i = 0; i < keys.length; i++) {
           var key = keys[i];
@@ -584,19 +587,24 @@
 
 
   function defineReactive(data, key, value) {
-    observer(value); //深度递归劫持
+    var childDep = observer(value); //深度递归劫持
 
     var dep = new Dep(); //给每个属性添加一个dep
 
     Object.defineProperty(data, key, {
       get: function get() {
-        console.log('获取', key); // 收集依赖
-
+        // console.log('childDep', childDep)
+        // console.log('获取', key)
+        // 收集依赖
         if (Dep.target) {
-          dep.depend();
-        }
+          dep.depend(); // 让数组和对象本身也实现依赖收集
 
-        console.log(dep);
+          if (childDep.dep) {
+            childDep.dep.depend();
+          }
+        } // console.log(dep)
+
+
         return value;
       },
       set: function set(newVal) {
@@ -801,8 +809,8 @@
   function lifecycleMixin(Vue) {
     Vue.prototype._update = function (vnode) {
       // vnode变成真实DOM
-      var vm = this;
-      console.log(vnode); // console.log(vm)
+      var vm = this; // console.log(vnode)
+      // console.log(vm)
       // 旧dom  虚拟dom
 
       vm.$el = patch(vm.$el, vnode);

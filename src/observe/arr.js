@@ -29,6 +29,7 @@ methods.forEach((method) => {
       // 对新增的内容进行劫持
       ob.observeArray(inserted)
     }
+    ob.dep.notify()
     return result
   }
 })
