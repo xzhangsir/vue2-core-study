@@ -1,10 +1,17 @@
+let id = 0
 class Dep {
   constructor() {
+    this.id = id++
     this.subs = []
   }
-  // 收集watcher
+  // 让watcher收集dep
   depend() {
-    this.subs.push(Dep.target)
+    // this.subs.push(Dep.target)
+    Dep.target.addDep(this)
+  }
+  // dep收集watcher
+  addWatcher(watcher) {
+    this.subs.push(watcher)
   }
   // 更新
   notify() {

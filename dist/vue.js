@@ -479,18 +479,28 @@
     };
   });
 
+  var id$1 = 0;
+
   var Dep = /*#__PURE__*/function () {
     function Dep() {
       _classCallCheck(this, Dep);
 
+      this.id = id$1++;
       this.subs = [];
-    } // 收集watcher
+    } // 让watcher收集dep
 
 
     _createClass(Dep, [{
       key: "depend",
       value: function depend() {
-        this.subs.push(Dep.target);
+        // this.subs.push(Dep.target)
+        Dep.target.addDep(this);
+      } // dep收集watcher
+
+    }, {
+      key: "addWatcher",
+      value: function addWatcher(watcher) {
+        this.subs.push(watcher);
       } // 更新
 
     }, {
@@ -651,6 +661,8 @@
     });
   }
 
+  var id = 0;
+
   var watcher = /*#__PURE__*/function () {
     function watcher(vm, updateComponent, cb, options) {
       _classCallCheck(this, watcher);
@@ -659,6 +671,9 @@
       this.exprOrfn = updateComponent;
       this.cb = cb;
       this.options = options;
+      this.id = id++;
+      this.deps = [];
+      this.depsId = new Set();
 
       if (typeof updateComponent === 'function') {
         this.getter = updateComponent; //更新视图
@@ -676,6 +691,18 @@
         this.getter(); //渲染页面
 
         popTarget(); //给dep取消watcher
+      } // wather dep 相互关联
+
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.deps.push(dep);
+          this.depsId.add(id);
+          dep.addWatcher(this);
+        }
       } // 更新
 
     }, {
