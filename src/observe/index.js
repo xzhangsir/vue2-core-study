@@ -1,4 +1,5 @@
 import { ArrayMethods } from './arr'
+import Dep from './dep'
 export function observer(data) {
   if (typeof data !== 'object' || data === null) {
     // data不是对象或者data为空 不劫持
@@ -48,9 +49,15 @@ class Observer {
 // 对对象中的属性进行劫持
 function defineReactive(data, key, value) {
   observer(value) //深度递归劫持
+  let dep = new Dep() //给每个属性添加一个dep
   Object.defineProperty(data, key, {
     get() {
-      // console.log('获取', key)
+      console.log('获取', key)
+      // 收集依赖
+      if (Dep.target) {
+        dep.depend()
+      }
+      console.log(dep)
       return value
     },
     set(newVal) {
@@ -58,6 +65,8 @@ function defineReactive(data, key, value) {
       if (newVal === value) return
       observer(newVal) //对设置的值 进行劫持
       value = newVal
+      // 触发更新
+      dep.notify()
     }
   })
 }

@@ -479,6 +479,42 @@
     };
   });
 
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.subs = [];
+    } // 收集watcher
+
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        this.subs.push(Dep.target);
+      } // 更新
+
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  Dep.target = null; // 添加watcher
+
+  function pushTarget(watcher) {
+    Dep.target = watcher;
+  } // 取消watcher
+
+  function popTarget() {
+    Dep.target = null;
+  }
+
   function observer(data) {
     if (_typeof(data) !== 'object' || data === null) {
       // data不是对象或者data为空 不劫持
@@ -540,9 +576,17 @@
   function defineReactive(data, key, value) {
     observer(value); //深度递归劫持
 
+    var dep = new Dep(); //给每个属性添加一个dep
+
     Object.defineProperty(data, key, {
       get: function get() {
-        // console.log('获取', key)
+        console.log('获取', key); // 收集依赖
+
+        if (Dep.target) {
+          dep.depend();
+        }
+
+        console.log(dep);
         return value;
       },
       set: function set(newVal) {
@@ -550,7 +594,9 @@
         if (newVal === value) return;
         observer(newVal); //对设置的值 进行劫持
 
-        value = newVal;
+        value = newVal; // 触发更新
+
+        dep.notify();
       }
     });
   }
@@ -625,8 +671,11 @@
     _createClass(watcher, [{
       key: "get",
       value: function get() {
+        pushTarget(this); //给dep添加watcher
 
         this.getter(); //渲染页面
+
+        popTarget(); //给dep取消watcher
       } // 更新
 
     }, {
