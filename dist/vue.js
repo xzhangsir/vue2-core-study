@@ -526,7 +526,7 @@
     Dep.target = null;
   }
 
-  function observer(data) {
+  function observer$1(data) {
     if (_typeof(data) !== 'object' || data === null) {
       // data不是对象或者data为空 不劫持
       return data;
@@ -577,7 +577,7 @@
       key: "observeArray",
       value: function observeArray(arr) {
         for (var i = 0; i < arr.length; i++) {
-          observer(arr[i]);
+          observer$1(arr[i]);
         }
       }
     }]);
@@ -587,7 +587,7 @@
 
 
   function defineReactive(data, key, value) {
-    var childDep = observer(value); //深度递归劫持
+    var childDep = observer$1(value); //深度递归劫持
 
     var dep = new Dep(); //给每个属性添加一个dep
 
@@ -610,13 +610,68 @@
       set: function set(newVal) {
         // console.log('设置', newVal)
         if (newVal === value) return;
-        observer(newVal); //对设置的值 进行劫持
+        observer$1(newVal); //对设置的值 进行劫持
 
         value = newVal; // 触发更新
 
         dep.notify();
       }
     });
+  }
+
+  var callbacks = [];
+  var waiting = false;
+
+  function flushCallbacks() {
+    var cbs = callbacks.slice(0);
+    waiting = false;
+    callbacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  }
+
+  var timerFunc; // nextTick 内部没有直接使用setTimeout 而是采用优雅降级的方式
+  // 内部先采用promise (ie不兼容)
+  // MutationObserver
+  // 考虑IE专享的 setImmediate
+  // 实在不行 就用 setTimeout
+
+  if (Promise) {
+    timerFunc = function timerFunc() {
+      Promise.resolve().then(flushCallbacks);
+    };
+  } else if (MutationObserver) {
+    var observer = new MutationObserver(flushCallbacks);
+    var textNode = document.createTextNode(1);
+    observer.observe(textNode, {
+      characterData: true
+    });
+
+    timerFunc = function timerFunc() {
+      textNode.textContent = 2; // 1 变 2    flushCallbacks执行
+    };
+  } else if (setImmediate) {
+    timerFunc = function timerFunc() {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(flushCallbacks, 0);
+    };
+  }
+
+  function nextTick(cb) {
+    // cb  有 vue更新的 也 有用户的
+    // console.log(cb)
+    callbacks.push(cb);
+
+    if (!waiting) {
+      // setTimeout(flushCallbacks, 0)
+      timerFunc(); //兼容
+
+      waiting = true;
+    }
   }
 
   function initState(vm) {
@@ -655,7 +710,7 @@
     } // 对data数据进行劫持
 
 
-    observer(data);
+    observer$1(data);
   }
 
   function proxy(vm, source, key) {
@@ -667,6 +722,12 @@
         vm[source][key] = newVal;
       }
     });
+  }
+
+  function stateMixin(vm) {
+    vm.prototype.$nextTick = function (cb) {
+      nextTick(cb);
+    };
   }
 
   var id = 0;
@@ -735,6 +796,16 @@
   var has = {};
   var pending = false;
 
+  function flushWatcher() {
+    queue.slice(0).forEach(function (watcher) {
+      watcher.run();
+      watcher.cb();
+    });
+    queue = [];
+    has = {};
+    pending = false;
+  }
+
   function queueWatcher(watcher) {
     var id = watcher.id; // console.log(id)
 
@@ -744,14 +815,14 @@
 
       if (!pending) {
         pending = true;
-        setTimeout(function () {
-          queue.forEach(function (watcher) {
-            return watcher.run();
-          });
-          queue = [];
-          has = {};
-          pending = false;
-        });
+        /*     setTimeout(() => {
+          queue.forEach((watcher) => watcher.run())
+          queue = []
+          has = {}
+          pending = false
+        }) */
+
+        nextTick(flushWatcher);
       }
     }
   }
@@ -836,7 +907,9 @@
       vm._update(vm._render());
     };
 
-    new watcher(vm, updateComponent, function () {}, true);
+    new watcher(vm, updateComponent, function () {
+      callHook(vm, 'updated');
+    }, true);
     callHook(vm, 'mounted');
   }
   function lifecycleMixin(Vue) {
@@ -982,6 +1055,7 @@
   lifecycleMixin(Vue);
   renderMixin(Vue);
   initGlobApi(Vue);
+  stateMixin(Vue); //给vm添加$nextTick
 
   return Vue;
 

@@ -1,4 +1,5 @@
 import { observer } from './observe/index'
+import { nextTick } from './utils/nextTick'
 export function initState(vm) {
   let ops = vm.$options
   // console.log('ops', ops)
@@ -56,3 +57,9 @@ function initProps() {}
 function initWatch() {}
 function initComputed() {}
 function initMethods() {}
+
+export function stateMixin(vm) {
+  vm.prototype.$nextTick = function (cb) {
+    nextTick(cb)
+  }
+}

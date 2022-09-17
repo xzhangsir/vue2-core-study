@@ -33,6 +33,9 @@
       },
       created(){
         console.log("main")
+      },
+      updated(){
+        console.log("数据更新完毕")
       }
     })
 
@@ -43,7 +46,11 @@
       // vm.list = [2,3]
       vm.list.push(90)
       // vm._update(vm._render())
+        vm.$nextTick(()=>{
+        console.log("我是用户的")
+      })
     },1000)
+ 
     
  
     // vue初次渲染流程：

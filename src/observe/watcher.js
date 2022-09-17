@@ -1,3 +1,4 @@
+import { nextTick } from '../utils/nextTick'
 import { popTarget, pushTarget } from './dep'
 let id = 0
 class watcher {
@@ -44,6 +45,15 @@ class watcher {
 let queue = []
 let has = {}
 let pending = false
+function flushWatcher() {
+  queue.slice(0).forEach((watcher) => {
+    watcher.run()
+    watcher.cb()
+  })
+  queue = []
+  has = {}
+  pending = false
+}
 function queueWatcher(watcher) {
   let id = watcher.id
   // console.log(id)
@@ -52,12 +62,14 @@ function queueWatcher(watcher) {
     has[id] = true
     if (!pending) {
       pending = true
-      setTimeout(() => {
+      /*     setTimeout(() => {
         queue.forEach((watcher) => watcher.run())
         queue = []
         has = {}
         pending = false
-      })
+      }) */
+
+      nextTick(flushWatcher)
     }
   }
 }
