@@ -18,9 +18,9 @@ starts.data = function (parentVal, childVal) {
 starts.computed = function () {
   // 合并computed
 }
-starts.watch = function () {
-  // 合并watch
-}
+// starts.watch = function () {
+//   // 合并watch
+// }
 
 HOOKS.forEach((hooks) => {
   starts[hooks] = mergeHook

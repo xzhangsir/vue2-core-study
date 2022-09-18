@@ -14,10 +14,10 @@
   };
 
   starts.computed = function () {// 合并computed
-  };
+  }; // starts.watch = function () {
+  //   // 合并watch
+  // }
 
-  starts.watch = function () {// 合并watch
-  };
 
   HOOKS.forEach(function (hooks) {
     starts[hooks] = mergeHook;
@@ -81,6 +81,32 @@
     };
   }
 
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      enumerableOnly && (symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      })), keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = null != arguments[i] ? arguments[i] : {};
+      i % 2 ? ownKeys(Object(source), !0).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
+
+    return target;
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -114,6 +140,21 @@
       writable: false
     });
     return Constructor;
+  }
+
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
   }
 
   function _slicedToArray(arr, i) {
@@ -674,8 +715,130 @@
     }
   }
 
+  var id = 0;
+
+  var watcher = /*#__PURE__*/function () {
+    function watcher(vm, updateComponent, cb, options) {
+      _classCallCheck(this, watcher);
+
+      this.vm = vm;
+      this.exprOrfn = updateComponent;
+      this.cb = cb;
+      this.options = options;
+      this.id = id++;
+      this.deps = [];
+      this.depsId = new Set(); // console.log(this.exprOrfn)
+
+      if (typeof this.exprOrfn === 'function') {
+        this.getter = this.exprOrfn; //更新视图
+      } else if (typeof this.exprOrfn === 'string') {
+        // watch
+        // console.log(vm)
+        this.getter = function () {
+          var path = this.exprOrfn.split('.');
+          var obj = vm;
+
+          for (var i = 0; i < path.length; i++) {
+            // console.log(path[i], vm[path[i]])
+            obj = obj[path[i]];
+          } // console.log(obj)
+
+
+          return obj;
+        };
+      }
+
+      this.value = this.get(); //保持watch的初始值
+
+      this.user = options.user; //watch用到：标识是不是用户自己的watcher
+    }
+
+    _createClass(watcher, [{
+      key: "run",
+      value: function run() {
+        var oldVal = this.value;
+        var newVal = this.get();
+        this.value = newVal;
+
+        if (this.user) {
+          this.cb.call(this.vm, newVal, oldVal);
+        }
+      } // 初次渲染
+
+    }, {
+      key: "get",
+      value: function get() {
+        pushTarget(this); //给dep添加watcher
+
+        var value = this.getter(); //渲染页面
+
+        popTarget(); //给dep取消watcher
+
+        return value;
+      } // wather dep 相互关联
+
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.deps.push(dep);
+          this.depsId.add(id);
+          dep.addWatcher(this);
+        }
+      } // 更新
+
+    }, {
+      key: "update",
+      value: function update() {
+        // this.getter()
+        // 多次调用update 只执行一次 缓存
+        queueWatcher(this);
+      }
+    }]);
+
+    return watcher;
+  }(); // 将需要批量更新的watcher存放到队列中
+
+
+  var queue = [];
+  var has = {};
+  var pending = false;
+
+  function flushWatcher() {
+    queue.slice(0).forEach(function (watcher) {
+      watcher.run(); // watcher.cb()
+    });
+    queue = [];
+    has = {};
+    pending = false;
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id; // console.log(id)
+
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true;
+
+      if (!pending) {
+        pending = true;
+        /*     setTimeout(() => {
+          queue.forEach((watcher) => watcher.run())
+          queue = []
+          has = {}
+          pending = false
+        }) */
+
+        nextTick(flushWatcher);
+      }
+    }
+  }
+
   function initState(vm) {
-    var ops = vm.$options; // console.log('ops', ops)
+    var ops = vm.$options;
+    console.log('ops', ops);
 
     if (ops.data) {
       initData(vm);
@@ -683,7 +846,9 @@
 
     if (ops.props) ;
 
-    if (ops.watch) ;
+    if (ops.watch) {
+      initWatch(vm);
+    }
 
     if (ops.computed) ;
 
@@ -724,107 +889,58 @@
     });
   }
 
+  function initWatch(vm) {
+    var watch = vm.$options.watch;
+    console.log(watch);
+
+    var _loop = function _loop(key) {
+      var handler = watch[key]; // handler  可能是数组对象字符 函数
+
+      if (Array.isArray(handler)) {
+        // 数组
+        handler.forEach(function (item) {
+          return createrWatcher(vm, key, item);
+        });
+      } else {
+        // 对象字符串函数
+        createrWatcher(vm, key, handler);
+      }
+    };
+
+    for (var key in watch) {
+      _loop(key);
+    }
+  } // vm.$watch(()=>{return "a"}) //返回的值就是watcher上的属性
+
+
+  function createrWatcher(vm, exprOrfn, handler, options) {
+    if (_typeof(handler) === 'object') {
+      options = handler;
+      handler = handler.handler;
+    } else if (typeof handler === 'string') {
+      handler = vm[handler];
+    } // 最终都交给$watch处理
+
+
+    return vm.$watch(exprOrfn, handler, options);
+  }
+
   function stateMixin(vm) {
     vm.prototype.$nextTick = function (cb) {
       nextTick(cb);
     };
-  }
 
-  var id = 0;
+    vm.prototype.$watch = function (exprOrfn, handler, options) {
+      // console.log(exprOrfn, handler, options)
+      new watcher(this, exprOrfn, handler, _objectSpread2(_objectSpread2({}, options), {}, {
+        user: true
+      }));
 
-  var watcher = /*#__PURE__*/function () {
-    function watcher(vm, updateComponent, cb, options) {
-      _classCallCheck(this, watcher);
-
-      this.vm = vm;
-      this.exprOrfn = updateComponent;
-      this.cb = cb;
-      this.options = options;
-      this.id = id++;
-      this.deps = [];
-      this.depsId = new Set();
-
-      if (typeof updateComponent === 'function') {
-        this.getter = updateComponent; //更新视图
+      if (options && options.immediate) {
+        // immediate 立即执行
+        handler.call(vm);
       }
-
-      this.get();
-    }
-
-    _createClass(watcher, [{
-      key: "run",
-      value: function run() {
-        this.getter();
-      } // 初次渲染
-
-    }, {
-      key: "get",
-      value: function get() {
-        pushTarget(this); //给dep添加watcher
-
-        this.getter(); //渲染页面
-
-        popTarget(); //给dep取消watcher
-      } // wather dep 相互关联
-
-    }, {
-      key: "addDep",
-      value: function addDep(dep) {
-        var id = dep.id;
-
-        if (!this.depsId.has(id)) {
-          this.deps.push(dep);
-          this.depsId.add(id);
-          dep.addWatcher(this);
-        }
-      } // 更新
-
-    }, {
-      key: "update",
-      value: function update() {
-        // this.getter()
-        // 多次调用update 只执行一次 缓存
-        queueWatcher(this);
-      }
-    }]);
-
-    return watcher;
-  }(); // 将需要批量更新的watcher存放到队列中
-
-
-  var queue = [];
-  var has = {};
-  var pending = false;
-
-  function flushWatcher() {
-    queue.slice(0).forEach(function (watcher) {
-      watcher.run();
-      watcher.cb();
-    });
-    queue = [];
-    has = {};
-    pending = false;
-  }
-
-  function queueWatcher(watcher) {
-    var id = watcher.id; // console.log(id)
-
-    if (!has[id]) {
-      queue.push(watcher);
-      has[id] = true;
-
-      if (!pending) {
-        pending = true;
-        /*     setTimeout(() => {
-          queue.forEach((watcher) => watcher.run())
-          queue = []
-          has = {}
-          pending = false
-        }) */
-
-        nextTick(flushWatcher);
-      }
-    }
+    };
   }
 
   function patch(oldVnode, vnode) {

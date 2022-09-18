@@ -28,8 +28,27 @@
           user:{
             name:"zx"
           },
+          a:{
+            b:{
+              c:123
+            }
+          },
           list:[1,2]
         }
+      },
+      watch:{
+        msg(newVal,oldVal){
+          console.log(newVal,oldVal)
+        },
+        // user:{
+        //   handler(newVal,oldVal){
+        //       console.log(newVal,oldVal)
+        //   },
+        //   immediate:true
+        // },
+        // "a.b.c"(newVal,oldVal){
+        //   console.log(newVal,oldVal)
+        // }
       },
       created(){
         console.log("main")
@@ -38,9 +57,12 @@
         console.log("数据更新完毕")
       }
     })
-
-    console.log(vm)
     setTimeout(()=>{
+      vm.msg = "200"
+    },1500)
+
+    // console.log(vm)
+ /*    setTimeout(()=>{
       vm.msg = "meng"
       vm.user.name = "xm"
       // vm.list = [2,3]
@@ -50,7 +72,7 @@
         console.log("我是用户的")
       })
     },1000)
- 
+  */
     
  
     // vue初次渲染流程：
