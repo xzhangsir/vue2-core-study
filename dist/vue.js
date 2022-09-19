@@ -968,9 +968,8 @@
       return el;
     } else {
       /*新老节点相同*/
-      var _el = vnode.el = oldVnode.el;
+      var _el = vnode.el = oldVnode.el; // console.log(el)
 
-      console.log(_el);
 
       if (!oldVnode.tag) {
         // 文本
@@ -981,8 +980,7 @@
 
       patchProps(_el, oldVnode.data, vnode.data);
       var oldChildren = oldVnode.children || [];
-      var newChildren = vnode.children || [];
-      console.log(oldVnode, vnode);
+      var newChildren = vnode.children || []; // console.log(oldVnode, vnode)
 
       if (oldChildren.length > 0 && newChildren.length > 0) {
         // 完整的diff
@@ -1026,21 +1024,35 @@
       } else if (isSameVnode(oldEndVnode, newEndVnode)) {
         // 尾尾比对
         patchVnode(oldEndVnode, newEndVnode);
-        oldEndVnode = oldChildren[++oldEndIndex];
-        newEndVnode = newChildren[++newEndIndex];
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      } else if (isSameVnode(oldEndVnode, newStartVnode)) {
+        // 交叉比对(尾头)  abcd => dabc
+        patchVnode(oldEndVnode, newStartVnode);
+        el.insertBefore(oldEndVnode.el, oldStartVnode.el);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else if (isSameVnode(oldStartVnode, newEndVnode)) {
+        // 交叉比对(头尾)  abcd => dcba
+        patchVnode(oldStartVnode, newEndVnode);
+        el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newEndVnode = newChildren[--newEndIndex];
       }
     } // ab => abc     abc=>dabc
 
 
     if (newStartIndex <= newEndIndex) {
       for (var i = newStartIndex; i <= newEndIndex; i++) {
-        var childEl = createEl(newChildren[i]);
-        el.appendChild(childEl);
+        var childEl = createEl(newChildren[i]); // el.appendChild(childEl)
+
+        var anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null; //获取下一个元素 可能没有
+
+        el.insertBefore(childEl, anchor);
       }
     } // abcd=>abc abc=>bc
+    // console.log(oldStartIndex, oldEndIndex)
 
-
-    console.log(oldStartIndex, oldEndIndex);
 
     if (oldStartIndex <= oldEndIndex) {
       for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
