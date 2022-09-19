@@ -943,9 +943,8 @@
   }
 
   function patch(oldVnode, vnode) {
-    console.log(oldVnode);
-    console.log(vnode);
-
+    // console.log(oldVnode)
+    // console.log(vnode)
     if (oldVnode.nodeType === 1) {
       // vnode ->真实dom
       // 1）创建新dom
@@ -957,55 +956,100 @@
       parentEL.removeChild(oldVnode);
       return el;
     } else {
-      // diff
-      // // 新老节点不相同 直接用新的替换掉老的
-      if (!isSameVnode(oldVnode, vnode)) {
-        var _el = createEl(vnode);
+      patchVnode(oldVnode, vnode); // diff
+    }
+  }
 
-        oldVnode.el.parentNode.replaceChild(_el, oldVnode.el);
-        return _el;
-      } else {
-        /*新老节点相同*/
-        var _el2 = vnode.el = oldVnode.el;
+  function patchVnode(oldVnode, vnode) {
+    // // 新老节点不相同 直接用新的替换掉老的
+    if (!isSameVnode(oldVnode, vnode)) {
+      var el = createEl(vnode);
+      oldVnode.el.parentNode.replaceChild(el, oldVnode.el);
+      return el;
+    } else {
+      /*新老节点相同*/
+      var _el = vnode.el = oldVnode.el;
 
-        console.log(_el2);
+      console.log(_el);
 
-        if (!oldVnode.tag) {
-          // 文本
-          if (oldVnode.text !== vnode.text) {
-            _el2.textContent = vnode.text;
-          }
+      if (!oldVnode.tag) {
+        // 文本
+        if (oldVnode.text !== vnode.text) {
+          _el.textContent = vnode.text;
         }
-
-        patchProps(_el2, oldVnode.data, vnode.data);
-        var oldChildren = oldVnode.children || [];
-        var newChildren = vnode.children || [];
-
-        if (oldChildren.length > 0 && newChildren.length > 0) {
-          // 完整的diff
-          updateChildren(_el2, oldChildren, newChildren);
-        } else if (newChildren.length > 0) {
-          // 老的没有  新的有儿子
-          // mountChildren(el, newChildren)
-          for (var i = 0; i < newChildren.length; i++) {
-            var child = newChildren[i];
-
-            _el2.appendChild(createEl(child));
-          }
-        } else if (oldChildren.length > 0) {
-          // 新的没有 老的有 要删除
-          // unmountChildren(el, oldChildren)
-          _el2.innerHTML = '';
-        } // console.log(oldChildren, newChildren)
-
-
-        return _el2;
       }
+
+      patchProps(_el, oldVnode.data, vnode.data);
+      var oldChildren = oldVnode.children || [];
+      var newChildren = vnode.children || [];
+      console.log(oldVnode, vnode);
+
+      if (oldChildren.length > 0 && newChildren.length > 0) {
+        // 完整的diff
+        updateChildren(_el, oldChildren, newChildren);
+      } else if (newChildren.length > 0) {
+        // 老的没有  新的有儿子
+        // mountChildren(el, newChildren)
+        for (var i = 0; i < newChildren.length; i++) {
+          var child = newChildren[i];
+
+          _el.appendChild(createEl(child));
+        }
+      } else if (oldChildren.length > 0) {
+        // 新的没有 老的有 要删除
+        // unmountChildren(el, oldChildren)
+        _el.innerHTML = '';
+      } // console.log(oldChildren, newChildren)
+
+
+      return _el;
     }
   }
 
   function updateChildren(el, oldChildren, newChildren) {
     console.log(el, oldChildren, newChildren);
+    var oldStartIndex = 0;
+    var newStartIndex = 0;
+    var oldEndIndex = oldChildren.length - 1;
+    var newEndIndex = newChildren.length - 1;
+    var oldStartVnode = oldChildren[0];
+    var newStartVnode = newChildren[0];
+    var oldEndVnode = oldChildren[oldEndIndex];
+    var newEndVnode = newChildren[newEndIndex];
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      if (isSameVnode(oldStartVnode, newStartVnode)) {
+        // 头头比对
+        patchVnode(oldStartVnode, newStartVnode);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        // 尾尾比对
+        patchVnode(oldEndVnode, newEndVnode);
+        oldEndVnode = oldChildren[++oldEndIndex];
+        newEndVnode = newChildren[++newEndIndex];
+      }
+    } // ab => abc     abc=>dabc
+
+
+    if (newStartIndex <= newEndIndex) {
+      for (var i = newStartIndex; i <= newEndIndex; i++) {
+        var childEl = createEl(newChildren[i]);
+        el.appendChild(childEl);
+      }
+    } // abcd=>abc abc=>bc
+
+
+    console.log(oldStartIndex, oldEndIndex);
+
+    if (oldStartIndex <= oldEndIndex) {
+      for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
+        if (oldChildren[_i]) {
+          var _childEl = oldChildren[_i].el;
+          el.removeChild(_childEl);
+        }
+      }
+    }
   } // 判断两个虚拟节点是不是同一个
 
 
@@ -1232,7 +1276,7 @@
   stateMixin(Vue); //给vm添加$nextTick
 
   window.onload = function () {
-    var render1 = compileToFunction("<div id = \"a\" class = \"cc\" ></div>");
+    var render1 = compileToFunction("<ul><li>2</li><li>3</li></ul>");
     var vm1 = new Vue({
       data: {
         name: 'zx'
@@ -1245,7 +1289,7 @@
     // console.log(document.body)
 
     document.body.appendChild(el);
-    var render2 = compileToFunction("<div id = \"c\" class = \"cc dd\" >{{name}}</div>");
+    var render2 = compileToFunction("<ul><li>1</li><li>2</li><li>3</li></ul>");
     var vm2 = new Vue({
       data: {
         name: 'xm'
@@ -1256,7 +1300,7 @@
 
     setTimeout(function () {
       patch(prevVnode, nextVnode);
-    }, 1000);
+    }, 3000);
   };
 
   return Vue;

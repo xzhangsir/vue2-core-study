@@ -20,7 +20,7 @@ stateMixin(Vue) //给vm添加$nextTick
 export default Vue
 
 window.onload = function () {
-  let render1 = compileToFunction(`<div id = "a" class = "cc" ></div>`)
+  let render1 = compileToFunction(`<ul><li>2</li><li>3</li></ul>`)
   let vm1 = new Vue({ data: { name: 'zx' } })
   let prevVnode = render1.call(vm1)
   let el = createEl(prevVnode)
@@ -29,14 +29,12 @@ window.onload = function () {
   // console.log(el)
   // console.log(document.body)
   document.body.appendChild(el)
-  let render2 = compileToFunction(
-    `<div id = "c" class = "cc dd" >{{name}}</div>`
-  )
+  let render2 = compileToFunction(`<ul><li>1</li><li>2</li><li>3</li></ul>`)
   let vm2 = new Vue({ data: { name: 'xm' } })
   let nextVnode = render2.call(vm2)
   // console.log(render2)
   // console.log(nextVnode)
   setTimeout(() => {
     patch(prevVnode, nextVnode)
-  }, 1000)
+  }, 3000)
 }
