@@ -4,83 +4,6 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
-  var HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestory', 'destroyed']; // 策略模式
-
-  var starts = {};
-
-  starts.data = function (parentVal, childVal) {
-    // 合并data
-    return childVal;
-  };
-
-  starts.computed = function () {// 合并computed
-  }; // starts.watch = function () {
-  //   // 合并watch
-  // }
-
-
-  HOOKS.forEach(function (hooks) {
-    starts[hooks] = mergeHook;
-  });
-
-  function mergeHook(parentVal, childVal) {
-    // console.log(parentVal, childVal)
-    if (childVal) {
-      if (parentVal) {
-        return parentVal.concat(childVal);
-      } else {
-        return [childVal];
-      }
-    } else {
-      return parentVal;
-    }
-  }
-
-  function mergeOptions(parent, child) {
-    // 合并对象
-    // console.log(parent, child)
-    var options = {}; // 父亲
-
-    for (var key in parent) {
-      mergeField(key);
-    } // 儿子有
-
-
-    for (var _key in child) {
-      if (!parent.hasOwnProperty(_key)) {
-        mergeField(_key);
-      }
-    }
-
-    function mergeField(key) {
-      // 策略模式
-      if (starts[key]) {
-        options[key] = starts[key](parent[key], child[key]);
-      } else {
-        options[key] = child[key] || parent[key];
-      }
-    } // console.log('options', options)
-
-
-    return options;
-  }
-
-  function initGlobApi(Vue) {
-    // created:[a,b,c]
-    // watch:[a,b]
-    Vue.options = {};
-
-    Vue.mixin = function (mixin) {
-      // console.log(this)
-      // 对象的合并
-      // console.log(Vue.options)
-      // console.log(mixin)
-      this.options = mergeOptions(this.options, mixin); // console.log(this.options)
-
-      return this;
-    };
-  }
-
   function ownKeys(object, enumerableOnly) {
     var keys = Object.keys(object);
 
@@ -229,68 +152,68 @@
 
   var startTagClose = /^\s*(\/?)>/; // {{}}
 
-  var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // 创建一个ast对象
-
-  function createASTElement(tag, attrs) {
-    return {
-      tag: tag,
-      //元素
-      attrs: attrs,
-      //属性
-      children: [],
-      //子节点
-      type: 1,
-      //元素类型(标签 1)
-      parent: null
-    };
-  }
-
-  var root; //根元素
-
-  var currentParent; //当前的父亲
-
-  var stack = [];
-
-  function start(tag, attrs) {
-    // 开始标签
-    // console.log('开始标签', tag, attrs)
-    var element = createASTElement(tag, attrs);
-
-    if (!root) {
-      root = element;
-    }
-
-    currentParent = element;
-    stack.push(element);
-  }
-
-  function charts(text) {
-    // 文本
-    // console.log('文本', text)
-    text = text.replace(/\s/g, '');
-
-    if (text) {
-      currentParent.children.push({
-        type: 3,
-        //元素类型(文本 3)
-        text: text
-      });
-    }
-  }
-
-  function end(tag) {
-    // 结束标签
-    // console.log('结束标签', tag)
-    var element = stack.pop();
-    currentParent = stack[stack.length - 1];
-
-    if (currentParent) {
-      element.parent = currentParent.tag;
-      currentParent.children.push(element);
-    }
-  }
-
+  var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g;
   function parseHTML(html) {
+    // 创建一个ast对象
+    function createASTElement(tag, attrs) {
+      return {
+        tag: tag,
+        //元素
+        attrs: attrs,
+        //属性
+        children: [],
+        //子节点
+        type: 1,
+        //元素类型(标签 1)
+        parent: null
+      };
+    }
+
+    var root; //根元素
+
+    var currentParent; //当前的父亲
+
+    var stack = [];
+
+    function start(tag, attrs) {
+      // 开始标签
+      // console.log('开始标签', tag, attrs)
+      var element = createASTElement(tag, attrs);
+
+      if (!root) {
+        root = element;
+      }
+
+      currentParent = element;
+      stack.push(element);
+    }
+
+    function charts(text) {
+      // 文本
+      // console.log('文本', text)
+      text = text.replace(/\s/g, '');
+
+      if (text) {
+        currentParent.children.push({
+          type: 3,
+          //元素类型(文本 3)
+          text: text
+        });
+      }
+    }
+
+    function end(tag) {
+      // 结束标签
+      // console.log('结束标签', tag)
+      var element = stack.pop();
+      currentParent = stack[stack.length - 1];
+
+      if (currentParent) {
+        element.parent = currentParent.tag;
+        currentParent.children.push(element);
+      }
+    }
+
     while (html) {
       // 判断标签
       var textEnd = html.indexOf('<');
@@ -478,6 +401,83 @@
     var render = new Function("with(this){return ".concat(code, "}")); // console.log('render', render)
 
     return render;
+  }
+
+  var HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestory', 'destroyed']; // 策略模式
+
+  var starts = {};
+
+  starts.data = function (parentVal, childVal) {
+    // 合并data
+    return childVal;
+  };
+
+  starts.computed = function () {// 合并computed
+  }; // starts.watch = function () {
+  //   // 合并watch
+  // }
+
+
+  HOOKS.forEach(function (hooks) {
+    starts[hooks] = mergeHook;
+  });
+
+  function mergeHook(parentVal, childVal) {
+    // console.log(parentVal, childVal)
+    if (childVal) {
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+
+  function mergeOptions(parent, child) {
+    // 合并对象
+    // console.log(parent, child)
+    var options = {}; // 父亲
+
+    for (var key in parent) {
+      mergeField(key);
+    } // 儿子有
+
+
+    for (var _key in child) {
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+
+    function mergeField(key) {
+      // 策略模式
+      if (starts[key]) {
+        options[key] = starts[key](parent[key], child[key]);
+      } else {
+        options[key] = child[key] || parent[key];
+      }
+    } // console.log('options', options)
+
+
+    return options;
+  }
+
+  function initGlobApi(Vue) {
+    // created:[a,b,c]
+    // watch:[a,b]
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      // console.log(this)
+      // 对象的合并
+      // console.log(Vue.options)
+      // console.log(mixin)
+      this.options = mergeOptions(this.options, mixin); // console.log(this.options)
+
+      return this;
+    };
   }
 
   // 重写数组方法
@@ -837,8 +837,7 @@
   }
 
   function initState(vm) {
-    var ops = vm.$options;
-    console.log('ops', ops);
+    var ops = vm.$options; // console.log('ops', ops)
 
     if (ops.data) {
       initData(vm);
@@ -944,16 +943,76 @@
   }
 
   function patch(oldVnode, vnode) {
-    // vnode ->真实dom
-    // 1）创建新dom
-    var el = createEl(vnode); // console.log(el)
-    // 2) 新dom替换旧dom
+    console.log(oldVnode);
+    console.log(vnode);
 
-    var parentEL = oldVnode.parentNode;
-    parentEL.insertBefore(el, oldVnode.nextsibling);
-    parentEL.removeChild(oldVnode);
-    return el;
+    if (oldVnode.nodeType === 1) {
+      // vnode ->真实dom
+      // 1）创建新dom
+      var el = createEl(vnode); // console.log(el)
+      // 2) 新dom替换旧dom
+
+      var parentEL = oldVnode.parentNode;
+      parentEL.insertBefore(el, oldVnode.nextsibling);
+      parentEL.removeChild(oldVnode);
+      return el;
+    } else {
+      // diff
+      // // 新老节点不相同 直接用新的替换掉老的
+      if (!isSameVnode(oldVnode, vnode)) {
+        var _el = createEl(vnode);
+
+        oldVnode.el.parentNode.replaceChild(_el, oldVnode.el);
+        return _el;
+      } else {
+        /*新老节点相同*/
+        var _el2 = vnode.el = oldVnode.el;
+
+        console.log(_el2);
+
+        if (!oldVnode.tag) {
+          // 文本
+          if (oldVnode.text !== vnode.text) {
+            _el2.textContent = vnode.text;
+          }
+        }
+
+        patchProps(_el2, oldVnode.data, vnode.data);
+        var oldChildren = oldVnode.children || [];
+        var newChildren = vnode.children || [];
+
+        if (oldChildren.length > 0 && newChildren.length > 0) {
+          // 完整的diff
+          updateChildren(_el2, oldChildren, newChildren);
+        } else if (newChildren.length > 0) {
+          // 老的没有  新的有儿子
+          // mountChildren(el, newChildren)
+          for (var i = 0; i < newChildren.length; i++) {
+            var child = newChildren[i];
+
+            _el2.appendChild(createEl(child));
+          }
+        } else if (oldChildren.length > 0) {
+          // 新的没有 老的有 要删除
+          // unmountChildren(el, oldChildren)
+          _el2.innerHTML = '';
+        } // console.log(oldChildren, newChildren)
+
+
+        return _el2;
+      }
+    }
+  }
+
+  function updateChildren(el, oldChildren, newChildren) {
+    console.log(el, oldChildren, newChildren);
+  } // 判断两个虚拟节点是不是同一个
+
+
+  function isSameVnode(vnode1, vnode2) {
+    return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
   } // 创建dom
+
 
   function createEl(vnode) {
     var tag = vnode.tag,
@@ -978,7 +1037,6 @@
 
     return vnode.el;
   }
-
   function patchProps(el) {
     var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -1172,6 +1230,34 @@
   renderMixin(Vue);
   initGlobApi(Vue);
   stateMixin(Vue); //给vm添加$nextTick
+
+  window.onload = function () {
+    var render1 = compileToFunction("<div id = \"a\" class = \"cc\" ></div>");
+    var vm1 = new Vue({
+      data: {
+        name: 'zx'
+      }
+    });
+    var prevVnode = render1.call(vm1);
+    var el = createEl(prevVnode); // console.log(render1)
+    // console.log(prevVnode)
+    // console.log(el)
+    // console.log(document.body)
+
+    document.body.appendChild(el);
+    var render2 = compileToFunction("<div id = \"c\" class = \"cc dd\" >{{name}}</div>");
+    var vm2 = new Vue({
+      data: {
+        name: 'xm'
+      }
+    });
+    var nextVnode = render2.call(vm2); // console.log(render2)
+    // console.log(nextVnode)
+
+    setTimeout(function () {
+      patch(prevVnode, nextVnode);
+    }, 1000);
+  };
 
   return Vue;
 

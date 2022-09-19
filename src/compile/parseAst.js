@@ -14,55 +14,55 @@ const startTagClose = /^\s*(\/?)>/
 // {{}}
 export const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g
 
-// 创建一个ast对象
-function createASTElement(tag, attrs) {
-  return {
-    tag, //元素
-    attrs, //属性
-    children: [], //子节点
-    type: 1, //元素类型(标签 1)
-    parent: null
-  }
-}
-
-let root //根元素
-let currentParent //当前的父亲
-let stack = []
-
-function start(tag, attrs) {
-  // 开始标签
-  // console.log('开始标签', tag, attrs)
-  let element = createASTElement(tag, attrs)
-  if (!root) {
-    root = element
-  }
-  currentParent = element
-  stack.push(element)
-}
-function charts(text) {
-  // 文本
-  // console.log('文本', text)
-  text = text.replace(/\s/g, '')
-  if (text) {
-    currentParent.children.push({
-      type: 3, //元素类型(文本 3)
-      text
-    })
-  }
-}
-function end(tag) {
-  // 结束标签
-  // console.log('结束标签', tag)
-  let element = stack.pop()
-  currentParent = stack[stack.length - 1]
-
-  if (currentParent) {
-    element.parent = currentParent.tag
-    currentParent.children.push(element)
-  }
-}
-
 export function parseHTML(html) {
+  // 创建一个ast对象
+  function createASTElement(tag, attrs) {
+    return {
+      tag, //元素
+      attrs, //属性
+      children: [], //子节点
+      type: 1, //元素类型(标签 1)
+      parent: null
+    }
+  }
+
+  let root //根元素
+  let currentParent //当前的父亲
+  let stack = []
+
+  function start(tag, attrs) {
+    // 开始标签
+    // console.log('开始标签', tag, attrs)
+    let element = createASTElement(tag, attrs)
+    if (!root) {
+      root = element
+    }
+    currentParent = element
+    stack.push(element)
+  }
+  function charts(text) {
+    // 文本
+    // console.log('文本', text)
+    text = text.replace(/\s/g, '')
+    if (text) {
+      currentParent.children.push({
+        type: 3, //元素类型(文本 3)
+        text
+      })
+    }
+  }
+  function end(tag) {
+    // 结束标签
+    // console.log('结束标签', tag)
+    let element = stack.pop()
+    currentParent = stack[stack.length - 1]
+
+    if (currentParent) {
+      element.parent = currentParent.tag
+      currentParent.children.push(element)
+    }
+  }
+
   while (html) {
     // 判断标签
     let textEnd = html.indexOf('<')

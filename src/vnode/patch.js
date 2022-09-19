@@ -1,20 +1,72 @@
 export function patch(oldVnode, vnode) {
-  // vnode ->真实dom
-  // 1）创建新dom
-  let el = createEl(vnode)
-  // console.log(el)
-  // 2) 新dom替换旧dom
-  let parentEL = oldVnode.parentNode
-  parentEL.insertBefore(el, oldVnode.nextsibling)
-  parentEL.removeChild(oldVnode)
-  return el
+  console.log(oldVnode)
+  console.log(vnode)
+  if (oldVnode.nodeType === 1) {
+    // vnode ->真实dom
+    // 1）创建新dom
+    let el = createEl(vnode)
+    // console.log(el)
+    // 2) 新dom替换旧dom
+    let parentEL = oldVnode.parentNode
+    parentEL.insertBefore(el, oldVnode.nextsibling)
+    parentEL.removeChild(oldVnode)
+    return el
+  } else {
+    // diff
+    // // 新老节点不相同 直接用新的替换掉老的
+    if (!isSameVnode(oldVnode, vnode)) {
+      let el = createEl(vnode)
+      oldVnode.el.parentNode.replaceChild(el, oldVnode.el)
+      return el
+    } else {
+      /*新老节点相同*/
+      let el = (vnode.el = oldVnode.el)
+      console.log(el)
+
+      if (!oldVnode.tag) {
+        // 文本
+        if (oldVnode.text !== vnode.text) {
+          el.textContent = vnode.text
+        }
+      }
+      patchProps(el, oldVnode.data, vnode.data)
+      let oldChildren = oldVnode.children || []
+      let newChildren = vnode.children || []
+      if (oldChildren.length > 0 && newChildren.length > 0) {
+        // 完整的diff
+        updateChildren(el, oldChildren, newChildren)
+      } else if (newChildren.length > 0) {
+        // 老的没有  新的有儿子
+        // mountChildren(el, newChildren)
+        for (let i = 0; i < newChildren.length; i++) {
+          let child = newChildren[i]
+          el.appendChild(createEl(child))
+        }
+      } else if (oldChildren.length > 0) {
+        // 新的没有 老的有 要删除
+        // unmountChildren(el, oldChildren)
+        el.innerHTML = ''
+      }
+      // console.log(oldChildren, newChildren)
+      return el
+    }
+  }
 }
+function updateChildren(el, oldChildren, newChildren) {
+  console.log(el, oldChildren, newChildren)
+}
+// 判断两个虚拟节点是不是同一个
+function isSameVnode(vnode1, vnode2) {
+  return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key
+}
+
 // 创建dom
-function createEl(vnode) {
+export function createEl(vnode) {
   let { tag, children, key, data, text } = vnode
   if (typeof tag === 'string') {
     // 是标签  创建元素
     vnode.el = document.createElement(tag)
+
     patchProps(vnode.el, {}, data)
     if (children.length > 0) {
       children.forEach((child) => {

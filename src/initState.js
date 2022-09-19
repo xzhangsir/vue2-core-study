@@ -3,7 +3,7 @@ import watcher from './observe/watcher'
 import { nextTick } from './utils/nextTick'
 export function initState(vm) {
   let ops = vm.$options
-  console.log('ops', ops)
+  // console.log('ops', ops)
   if (ops.data) {
     initData(vm)
   }
