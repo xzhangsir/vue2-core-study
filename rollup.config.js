@@ -16,7 +16,7 @@ export default {
     serve({
       port: 8181,
       contentBase: '', //空字符串就是在当前目录找
-      openPage: '/diff.html'
+      openPage: '/computed.html'
     })
   ]
 }

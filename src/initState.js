@@ -14,7 +14,7 @@ export function initState(vm) {
     initWatch(vm)
   }
   if (ops.computed) {
-    initComputed()
+    initComputed(vm)
   }
   if (ops.methods) {
     initMethods()
@@ -83,7 +83,51 @@ function createrWatcher(vm, exprOrfn, handler, options) {
   return vm.$watch(exprOrfn, handler, options)
 }
 
-function initComputed() {}
+function initComputed(vm) {
+  let computed = vm.$options.computed
+  // console.log(computed)
+  let myWatcher = (vm._computedWatchers = {})
+  for (let key in computed) {
+    let userDef = computed[key]
+    // computed 有可能是对象 或者方法
+    let getter = typeof userDef === 'function' ? userDef : userDef.get
+    myWatcher[key] = new watcher(vm, getter, () => {}, { lazy: true })
+    defineComputed(vm, key, userDef)
+  }
+}
+
+let sharePropDefinition = {}
+
+function defineComputed(target, key, userDef) {
+  sharePropDefinition = {
+    enumerable: true,
+    configurable: true,
+    get: () => {},
+    set: () => {}
+  }
+  if (typeof userDef === 'function') {
+    // sharePropDefinition.get = userDef
+    sharePropDefinition.get = createComputedGetter(key)
+  } else {
+    // sharePropDefinition.get = userDef.get
+    sharePropDefinition.get = createComputedGetter(key)
+    sharePropDefinition.set = userDef.set
+  }
+  Object.defineProperty(target, key, sharePropDefinition)
+}
+function createComputedGetter(key) {
+  return function () {
+    let watcher = this._computedWatchers[key]
+    if (watcher) {
+      if (watcher.dirty) {
+        // 执行 computed
+        // 如果数据是脏的 就去执行用户传入的函数
+        watcher.evaluate()
+      }
+      return watcher.value
+    }
+  }
+}
 function initMethods() {}
 
 export function stateMixin(vm) {

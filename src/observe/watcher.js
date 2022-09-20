@@ -7,6 +7,9 @@ class watcher {
     this.exprOrfn = updateComponent
     this.cb = cb
     this.options = options
+    // computed
+    this.lazy = options.lazy //watcher有lazy说明是计算属性
+    this.dirty = this.lazy
     this.id = id++
     this.deps = []
     this.depsId = new Set()
@@ -27,7 +30,7 @@ class watcher {
         return obj
       }
     }
-    this.value = this.get() //保持watch的初始值
+    this.value = this.lazy ? void 0 : this.get() //保持watch的初始值
     this.user = options.user //watch用到：标识是不是用户自己的watcher
   }
   run() {
@@ -59,6 +62,11 @@ class watcher {
     // this.getter()
     // 多次调用update 只执行一次 缓存
     queueWatcher(this)
+  }
+  // 计算属性
+  evaluate() {
+    this.value = this.get()
+    this.dirty = false
   }
 }
 

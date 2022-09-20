@@ -15,9 +15,9 @@ starts.data = function (parentVal, childVal) {
   // 合并data
   return childVal
 }
-starts.computed = function () {
-  // 合并computed
-}
+// starts.computed = function () {
+//   // 合并computed
+// }
 // starts.watch = function () {
 //   // 合并watch
 // }

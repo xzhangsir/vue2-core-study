@@ -410,10 +410,10 @@
   starts.data = function (parentVal, childVal) {
     // 合并data
     return childVal;
-  };
-
-  starts.computed = function () {// 合并computed
-  }; // starts.watch = function () {
+  }; // starts.computed = function () {
+  //   // 合并computed
+  // }
+  // starts.watch = function () {
   //   // 合并watch
   // }
 
@@ -724,7 +724,11 @@
       this.vm = vm;
       this.exprOrfn = updateComponent;
       this.cb = cb;
-      this.options = options;
+      this.options = options; // computed
+
+      this.lazy = options.lazy; //watcher有lazy说明是计算属性
+
+      this.dirty = this.lazy;
       this.id = id++;
       this.deps = [];
       this.depsId = new Set(); // console.log(this.exprOrfn)
@@ -748,7 +752,7 @@
         };
       }
 
-      this.value = this.get(); //保持watch的初始值
+      this.value = this.lazy ? void 0 : this.get(); //保持watch的初始值
 
       this.user = options.user; //watch用到：标识是不是用户自己的watcher
     }
@@ -795,6 +799,13 @@
         // this.getter()
         // 多次调用update 只执行一次 缓存
         queueWatcher(this);
+      } // 计算属性
+
+    }, {
+      key: "evaluate",
+      value: function evaluate() {
+        this.value = this.get();
+        this.dirty = false;
       }
     }]);
 
@@ -849,7 +860,9 @@
       initWatch(vm);
     }
 
-    if (ops.computed) ;
+    if (ops.computed) {
+      initComputed(vm);
+    }
 
     if (ops.methods) ;
   }
@@ -922,6 +935,60 @@
 
 
     return vm.$watch(exprOrfn, handler, options);
+  }
+
+  function initComputed(vm) {
+    var computed = vm.$options.computed; // console.log(computed)
+
+    var myWatcher = vm._computedWatchers = {};
+
+    for (var key in computed) {
+      var userDef = computed[key]; // computed 有可能是对象 或者方法
+
+      var getter = typeof userDef === 'function' ? userDef : userDef.get;
+      myWatcher[key] = new watcher(vm, getter, function () {}, {
+        lazy: true
+      });
+      defineComputed(vm, key, userDef);
+    }
+  }
+
+  var sharePropDefinition = {};
+
+  function defineComputed(target, key, userDef) {
+    sharePropDefinition = {
+      enumerable: true,
+      configurable: true,
+      get: function get() {},
+      set: function set() {}
+    };
+
+    if (typeof userDef === 'function') {
+      // sharePropDefinition.get = userDef
+      sharePropDefinition.get = createComputedGetter(key);
+    } else {
+      // sharePropDefinition.get = userDef.get
+      sharePropDefinition.get = createComputedGetter(key);
+      sharePropDefinition.set = userDef.set;
+    }
+
+    Object.defineProperty(target, key, sharePropDefinition);
+  }
+
+  function createComputedGetter(key) {
+    return function () {
+      var watcher = this._computedWatchers[key];
+
+      if (watcher) {
+        if (watcher.dirty) {
+          // 执行 computed
+          // 如果数据是脏的 就去执行用户传入的函数
+          watcher.evaluate();
+        }
+
+        return watcher.value;
+      }
+    };
   }
 
   function stateMixin(vm) {
