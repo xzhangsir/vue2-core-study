@@ -70,6 +70,16 @@ function updateChildren(el, oldChildren, newChildren) {
 
   let oldEndVnode = oldChildren[oldEndIndex]
   let newEndVnode = newChildren[newEndIndex]
+
+  function makeIndexByKey(children) {
+    let map = {}
+    children.forEach((child, index) => {
+      map[child.key] = index
+    })
+    return map
+  }
+
+  let map = makeIndexByKey(oldChildren)
   while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
     if (isSameVnode(oldStartVnode, newStartVnode)) {
       // 头头比对
@@ -95,6 +105,21 @@ function updateChildren(el, oldChildren, newChildren) {
 
       oldStartVnode = oldChildren[++oldStartIndex]
       newEndVnode = newChildren[--newEndIndex]
+    } else {
+      // 乱序比对
+      // 根据老的列表做一个映射关系 用新的去老的里面找 找到则移动 找不到则添加 最后多余的删除
+      let moveIndex = map[newStartVnode.key]
+      if (moveIndex === undefined) {
+        // 找不到则添加
+        el.insertBefore(createElm(newStartVnode), oldStartVnode.el)
+      } else {
+        // 找到则移动
+        let moveVnode = oldChildren[moveIndex] // 找到对应的虚拟节点
+        el.insertBefore(moveVnode.el, oldStartVnode.el) //
+        oldChildren[moveIndex] = undefined //标识这个节点已经移动了
+        patchVnode(moveVnode, newStartVnode) //对比属性和子节点
+      }
+      newStartVnode = newChildren[++newStartIndex] //移动指针
     }
   }
   // ab => abc     abc=>dabc

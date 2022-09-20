@@ -18,7 +18,7 @@ initGlobApi(Vue)
 stateMixin(Vue) //给vm添加$nextTick
 
 export default Vue
-
+/* 
 window.onload = function () {
   let render1 = compileToFunction(`<ul><li>2</li><li>3</li></ul>`)
   let vm1 = new Vue({ data: { name: 'zx' } })
@@ -38,3 +38,4 @@ window.onload = function () {
     patch(prevVnode, nextVnode)
   }, 3000)
 }
+ */

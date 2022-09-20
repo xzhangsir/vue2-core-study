@@ -29,9 +29,19 @@ export function lifecycleMixin(Vue) {
     // vnode变成真实DOM
     let vm = this
     // console.log(vnode)
-    console.log(vm)
+    // console.log(vm)
     // 旧dom  虚拟dom
-    vm.$el = patch(vm.$el, vnode)
+    // vm.$el = patch(vm.$el, vnode)
+    let prevVnode = vm._vnode
+    if (prevVnode) {
+      //prevVnode 有值 说明第一次渲染过了
+      // 更新
+      vm.$el = patch(prevVnode, vnode)
+    } else {
+      // 初次渲染
+      vm.$el = patch(vm.$el, vnode)
+      vm._vnode = vnode
+    }
   }
 }
 

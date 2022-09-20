@@ -1015,6 +1015,16 @@
     var oldEndVnode = oldChildren[oldEndIndex];
     var newEndVnode = newChildren[newEndIndex];
 
+    function makeIndexByKey(children) {
+      var map = {};
+      children.forEach(function (child, index) {
+        map[child.key] = index;
+      });
+      return map;
+    }
+
+    var map = makeIndexByKey(oldChildren);
+
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
       if (isSameVnode(oldStartVnode, newStartVnode)) {
         // 头头比对
@@ -1038,6 +1048,26 @@
         el.insertBefore(oldStartVnode.el, oldEndVnode.el.nextSibling);
         oldStartVnode = oldChildren[++oldStartIndex];
         newEndVnode = newChildren[--newEndIndex];
+      } else {
+        // 乱序比对
+        // 根据老的列表做一个映射关系 用新的去老的里面找 找到则移动 找不到则添加 最后多余的删除
+        var moveIndex = map[newStartVnode.key];
+
+        if (moveIndex === undefined) {
+          // 找不到则添加
+          el.insertBefore(createElm(newStartVnode), oldStartVnode.el);
+        } else {
+          // 找到则移动
+          var moveVnode = oldChildren[moveIndex]; // 找到对应的虚拟节点
+
+          el.insertBefore(moveVnode.el, oldStartVnode.el); //
+
+          oldChildren[moveIndex] = undefined; //标识这个节点已经移动了
+
+          patchVnode(moveVnode, newStartVnode); //对比属性和子节点
+        }
+
+        newStartVnode = newChildren[++newStartIndex]; //移动指针
       }
     } // ab => abc     abc=>dabc
 
@@ -1146,10 +1176,21 @@
     Vue.prototype._update = function (vnode) {
       // vnode变成真实DOM
       var vm = this; // console.log(vnode)
+      // console.log(vm)
+      // 旧dom  虚拟dom
+      // vm.$el = patch(vm.$el, vnode)
 
-      console.log(vm); // 旧dom  虚拟dom
+      var prevVnode = vm._vnode;
 
-      vm.$el = patch(vm.$el, vnode);
+      if (prevVnode) {
+        //prevVnode 有值 说明第一次渲染过了
+        // 更新
+        vm.$el = patch(prevVnode, vnode);
+      } else {
+        // 初次渲染
+        vm.$el = patch(vm.$el, vnode);
+        vm._vnode = vnode;
+      }
     };
   } // 生命周期的调用
 
@@ -1286,34 +1327,27 @@
   renderMixin(Vue);
   initGlobApi(Vue);
   stateMixin(Vue); //给vm添加$nextTick
-
+  /* 
   window.onload = function () {
-    var render1 = compileToFunction("<ul><li>2</li><li>3</li></ul>");
-    var vm1 = new Vue({
-      data: {
-        name: 'zx'
-      }
-    });
-    var prevVnode = render1.call(vm1);
-    var el = createEl(prevVnode); // console.log(render1)
+    let render1 = compileToFunction(`<ul><li>2</li><li>3</li></ul>`)
+    let vm1 = new Vue({ data: { name: 'zx' } })
+    let prevVnode = render1.call(vm1)
+    let el = createEl(prevVnode)
+    // console.log(render1)
     // console.log(prevVnode)
     // console.log(el)
     // console.log(document.body)
-
-    document.body.appendChild(el);
-    var render2 = compileToFunction("<ul><li>1</li><li>2</li><li>3</li></ul>");
-    var vm2 = new Vue({
-      data: {
-        name: 'xm'
-      }
-    });
-    var nextVnode = render2.call(vm2); // console.log(render2)
+    document.body.appendChild(el)
+    let render2 = compileToFunction(`<ul><li>1</li><li>2</li><li>3</li></ul>`)
+    let vm2 = new Vue({ data: { name: 'xm' } })
+    let nextVnode = render2.call(vm2)
+    // console.log(render2)
     // console.log(nextVnode)
-
-    setTimeout(function () {
-      patch(prevVnode, nextVnode);
-    }, 3000);
-  };
+    setTimeout(() => {
+      patch(prevVnode, nextVnode)
+    }, 3000)
+  }
+   */
 
   return Vue;
 
