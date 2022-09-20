@@ -18,6 +18,7 @@ export function initMixin(Vue) {
     callHook(vm, 'created')
     // console.log(vm)
     // 模板渲染
+    // console.log(vm.$options)
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)
     }

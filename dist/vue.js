@@ -417,6 +417,17 @@
   //   // 合并watch
   // }
 
+  /* starts.components = function (parentVal, childVal) {
+    const res = Object.create(parentVal)
+    if (childVal) {
+      for (let key in childVal) {
+        res[key] = childVal[key] //返回的是构造的对象 可以拿到父亲原型上的属性 并且将儿子的都拷贝到自己身上
+      }
+    }
+    return res
+  }
+   */
+
 
   HOOKS.forEach(function (hooks) {
     starts[hooks] = mergeHook;
@@ -477,6 +488,35 @@
       this.options = mergeOptions(this.options, mixin); // console.log(this.options)
 
       return this;
+    }; // 放全局组件的映射关系
+
+
+    Vue.options.components = {};
+
+    Vue.component = function (id, componentDef) {
+      componentDef.name = componentDef.name || id; // Vue 创建组件的核心 Vue.extend()
+
+      componentDef = Vue.extend(componentDef);
+      this.options.components[id] = componentDef;
+      console.log(this.options);
+    };
+
+    Vue.extend = function (options) {
+      var spuer = this;
+
+      var Sub = function vuecomponent(opts) {
+        this._init(opts);
+      }; // 子组件继承父组件
+
+
+      Sub.prototype = Object.create(spuer.prototype); // 将子组件中的this指向Sub
+
+      Sub.prototype.constructor = Sub; // 将父组件中的属性合并
+
+      Sub.options = mergeOptions(spuer.options, options);
+      console.log(spuer.options, options);
+      console.log(Sub.options);
+      return Sub;
     };
   }
 
@@ -1313,6 +1353,7 @@
       initState(vm);
       callHook(vm, 'created'); // console.log(vm)
       // 模板渲染
+      // console.log(vm.$options)
 
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
