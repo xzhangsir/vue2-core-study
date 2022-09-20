@@ -9,7 +9,7 @@
 </head>
 <body>
   <!-- {{fullname}} -->
-  <div id="app" class = "add num" ></div>
+  <div id="app" class = "add num" >{{fullname}}</div>
   <script>
     let vm = new Vue({
       el:"#app",
@@ -26,10 +26,13 @@
         }
       }
     })
-    vm.fullname
-    vm.fullname
-    // setTimeout(()=>{
-    // },1500)
+    
+    console.log(vm.fullname)
+    setTimeout(()=>{
+      vm.firstName = "xm"
+      console.log(vm.fullname)
+      console.log(vm.fullname)
+    },1500)
 
 
 

@@ -44,7 +44,7 @@ class watcher {
   // 初次渲染
   get() {
     pushTarget(this) //给dep添加watcher
-    const value = this.getter() //渲染页面
+    const value = this.getter.call(this.vm) //渲染页面
     popTarget() //给dep取消watcher
     return value
   }
@@ -61,12 +61,24 @@ class watcher {
   update() {
     // this.getter()
     // 多次调用update 只执行一次 缓存
-    queueWatcher(this)
+    if (this.lazy) {
+      // 计算属性
+      this.dirty = true
+    } else {
+      queueWatcher(this)
+    }
   }
   // 计算属性
   evaluate() {
     this.value = this.get()
     this.dirty = false
+  }
+  depend() {
+    let i = this.deps.length
+    while (i--) {
+      // 让计算属性watcher也收集渲染watcher
+      this.deps[i].depend()
+    }
   }
 }
 

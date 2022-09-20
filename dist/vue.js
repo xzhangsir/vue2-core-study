@@ -480,6 +480,58 @@
     };
   }
 
+  var id$1 = 0;
+
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id$1++;
+      this.subs = [];
+    } // 让watcher收集dep
+
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // this.subs.push(Dep.target)
+        Dep.target.addDep(this);
+      } // dep收集watcher
+
+    }, {
+      key: "addWatcher",
+      value: function addWatcher(watcher) {
+        this.subs.push(watcher);
+      } // 更新
+
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  Dep.target = null; // 添加watcher
+
+  var stack = []; //栈
+
+  function pushTarget(watcher) {
+    Dep.target = watcher; //watcher 入栈
+
+    stack.push(watcher); //渲染watcher 计算属性watcher
+  } // 取消watcher
+
+  function popTarget() {
+    // Dep.target = null
+    stack.pop();
+    Dep.target = stack[stack.length - 1];
+  }
+
   // 重写数组方法
   // 1) 获取原来数组的方法
   var oldArrayProtoMethods = Array.prototype; // 2) 继承
@@ -520,52 +572,6 @@
       return result;
     };
   });
-
-  var id$1 = 0;
-
-  var Dep = /*#__PURE__*/function () {
-    function Dep() {
-      _classCallCheck(this, Dep);
-
-      this.id = id$1++;
-      this.subs = [];
-    } // 让watcher收集dep
-
-
-    _createClass(Dep, [{
-      key: "depend",
-      value: function depend() {
-        // this.subs.push(Dep.target)
-        Dep.target.addDep(this);
-      } // dep收集watcher
-
-    }, {
-      key: "addWatcher",
-      value: function addWatcher(watcher) {
-        this.subs.push(watcher);
-      } // 更新
-
-    }, {
-      key: "notify",
-      value: function notify() {
-        this.subs.forEach(function (watcher) {
-          return watcher.update();
-        });
-      }
-    }]);
-
-    return Dep;
-  }();
-
-  Dep.target = null; // 添加watcher
-
-  function pushTarget(watcher) {
-    Dep.target = watcher;
-  } // 取消watcher
-
-  function popTarget() {
-    Dep.target = null;
-  }
 
   function observer$1(data) {
     if (_typeof(data) !== 'object' || data === null) {
@@ -774,7 +780,7 @@
       value: function get() {
         pushTarget(this); //给dep添加watcher
 
-        var value = this.getter(); //渲染页面
+        var value = this.getter.call(this.vm); //渲染页面
 
         popTarget(); //给dep取消watcher
 
@@ -798,7 +804,12 @@
       value: function update() {
         // this.getter()
         // 多次调用update 只执行一次 缓存
-        queueWatcher(this);
+        if (this.lazy) {
+          // 计算属性
+          this.dirty = true;
+        } else {
+          queueWatcher(this);
+        }
       } // 计算属性
 
     }, {
@@ -806,6 +817,16 @@
       value: function evaluate() {
         this.value = this.get();
         this.dirty = false;
+      }
+    }, {
+      key: "depend",
+      value: function depend() {
+        var i = this.deps.length;
+
+        while (i--) {
+          // 让计算属性watcher也收集渲染watcher
+          this.deps[i].depend();
+        }
       }
     }]);
 
@@ -984,6 +1005,11 @@
           // 执行 computed
           // 如果数据是脏的 就去执行用户传入的函数
           watcher.evaluate();
+        } //计算属性出栈后 还有渲染watcher 执行
+
+
+        if (Dep.target) {
+          watcher.depend();
         }
 
         return watcher.value;

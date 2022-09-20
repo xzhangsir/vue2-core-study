@@ -1,3 +1,4 @@
+import Dep from './observe/dep'
 import { observer } from './observe/index'
 import watcher from './observe/watcher'
 import { nextTick } from './utils/nextTick'
@@ -123,6 +124,10 @@ function createComputedGetter(key) {
         // 执行 computed
         // 如果数据是脏的 就去执行用户传入的函数
         watcher.evaluate()
+      }
+      //计算属性出栈后 还有渲染watcher 执行
+      if (Dep.target) {
+        watcher.depend()
       }
       return watcher.value
     }
