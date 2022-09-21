@@ -7,16 +7,16 @@ export default {
     file: 'dist/vue.js',
     format: 'umd',
     name: 'Vue',
-    sourcemap: true
+    sourcemap: false
   },
   plugins: [
     babel({
       exclude: 'node_modules/**'
-    }),
-    serve({
-      port: 8181,
-      contentBase: '', //空字符串就是在当前目录找
-      openPage: '/component.html'
     })
+    // serve({
+    //   port: 8181,
+    //   contentBase: '', //空字符串就是在当前目录找
+    //   openPage: '/index.html'
+    // })
   ]
 }
