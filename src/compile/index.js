@@ -13,6 +13,6 @@ export function compileToFunction(el) {
   // console.log('code', code)
   // 2-2)字符串变成函数
   let render = new Function(`with(this){return ${code}}`)
-  // console.log('render', render)
+  console.log('render', render)
   return render
 }

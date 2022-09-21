@@ -10,13 +10,10 @@
 <body>
   <div id="app">
     <my-button></my-button>
-    <h2>{{name}}</h2>
   </div>
   <script>
     // Vue.component() 核心是 Vue.extend() 放一个组件的实例 $mount() 挂载
-    Vue.component("my-button",{
-      template:`<button>全局按钮</button>`
-    })
+
 
     let vm = new Vue({
       el:"#app",
@@ -24,10 +21,13 @@
         name:"zx"
       },
       components:{
-        'my-button123':{
+        'my-button':{
           template:`<button>局部按钮</button>`
         }
       }
+    })
+        Vue.component("my-button",{
+      template:`<button>全局按钮</button>`
     })
     // 组件的优点
     // 复用 好维护 

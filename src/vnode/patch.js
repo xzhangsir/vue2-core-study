@@ -1,6 +1,9 @@
 export function patch(oldVnode, vnode) {
   // console.log(oldVnode)
   // console.log(vnode)
+  if (!oldVnode) {
+    return createEl(vnode)
+  }
   if (oldVnode.nodeType === 1) {
     // vnode ->真实dom
     // 1）创建新dom
@@ -151,21 +154,36 @@ function isSameVnode(vnode1, vnode2) {
 
 // 创建dom
 export function createEl(vnode) {
-  let { tag, children, key, data, text } = vnode
+  let { vm, tag, children, key, data, text } = vnode
   if (typeof tag === 'string') {
-    // 是标签  创建元素
-    vnode.el = document.createElement(tag)
+    if (createComponent(vnode)) {
+      // 是组建
+      // 组件  vnode上就有了 componentInstance.$el
+      return vnode.componentInstance.$el
+    } else {
+      // 是标签  创建元素
+      vnode.el = document.createElement(tag)
 
-    patchProps(vnode.el, {}, data)
-    if (children.length > 0) {
-      children.forEach((child) => {
-        vnode.el.appendChild(createEl(child))
-      })
+      patchProps(vnode.el, {}, data)
+      if (children.length > 0) {
+        children.forEach((child) => {
+          vnode.el.appendChild(createEl(child))
+        })
+      }
     }
   } else {
     vnode.el = document.createTextNode(text)
   }
   return vnode.el
+}
+function createComponent(vnode) {
+  let i = vnode.data
+  if ((i = i.hook) && (i = i.init)) {
+    i(vnode) //初始化组件
+  }
+  if (vnode.componentInstance) {
+    return true //说明是组件
+  }
 }
 
 export function patchProps(el, oldProps = {}, props = {}) {

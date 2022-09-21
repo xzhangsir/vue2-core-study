@@ -9,7 +9,7 @@ export function initMixin(Vue) {
     let vm = this
     // vm.$options = options
     // console.log(Vue.options)
-    vm.$options = mergeOptions(Vue.options, options)
+    vm.$options = mergeOptions(this.constructor.options, options)
     // console.log(vm.$options)
     // callHook
     callHook(vm, 'beforeCreate')

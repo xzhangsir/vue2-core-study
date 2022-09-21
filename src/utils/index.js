@@ -21,7 +21,7 @@ starts.data = function (parentVal, childVal) {
 // starts.watch = function () {
 //   // 合并watch
 // }
-/* starts.components = function (parentVal, childVal) {
+starts.components = function (parentVal, childVal) {
   const res = Object.create(parentVal)
   if (childVal) {
     for (let key in childVal) {
@@ -30,7 +30,7 @@ starts.data = function (parentVal, childVal) {
   }
   return res
 }
- */
+
 HOOKS.forEach((hooks) => {
   starts[hooks] = mergeHook
 })
@@ -50,7 +50,7 @@ function mergeHook(parentVal, childVal) {
 
 export function mergeOptions(parent, child) {
   // 合并对象
-  // console.log(parent, child)
+  console.log(parent, child)
   const options = {}
   // 父亲
   for (let key in parent) {
