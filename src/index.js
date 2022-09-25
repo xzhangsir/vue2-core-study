@@ -1,5 +1,9 @@
+import { initMixin } from './init'
+
 function Vue(options) {
-  console.log(options)
+  this.__init(options)
 }
+
+initMixin(Vue)
 
 export default Vue

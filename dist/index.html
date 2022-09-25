@@ -12,10 +12,32 @@
     <script>
       let vm = new Vue({
         el:"#app",
-        data:{
+        /* data:{
           name:"zx"
+        } */
+        data(){
+          return{
+            name:"zx",
+            // user:{
+            //   age:12,
+            // },
+            list:[2,3,4]
+          }
         }
       })
+      setTimeout(()=>{
+        console.log(vm)
+        // vm._data.list.push({a:1})
+        // vm._data.list[3].a = 34
+        // vm._data.name = "xm"
+        // vm._data.name = {
+        //   sex:"男"
+        // }
+        // console.log(vm._data.name);
+        //  vm._data.user.age = "19"
+
+        vm.name = "xm"
+      },1000)
     </script>
 </body>
 </html>
