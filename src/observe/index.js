@@ -5,7 +5,7 @@ export function observer(data) {
     // data不是对象或者data为空 不劫持
     return data
   }
-  console.log('要进行劫持的数据', data)
+  // console.log('要进行劫持的数据', data)
   return new Observer(data)
 }
 
@@ -43,11 +43,11 @@ function defineReactive(data, key, value) {
   observer(value)
   Object.defineProperty(data, key, {
     get() {
-      console.log('获取key', key, value)
+      // console.log('获取key', key, value)
       return value
     },
     set(newVal) {
-      console.log('设置key', key, newVal)
+      // console.log('设置key', key, newVal)
       if (value === newVal) return
       observer(newVal) //对设置的值 进行劫持
       value = newVal
