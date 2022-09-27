@@ -485,14 +485,70 @@
     });
   }
 
+  function createElementVNode(vm, tag, data) {
+    data = data || {};
+    var key = data.key;
+
+    if (key) {
+      delete data.key;
+    }
+
+    for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      children[_key - 3] = arguments[_key];
+    }
+
+    return vnode(vm, tag, data.key, data, children);
+  }
+  function createTextVNode(vm, text) {
+    return vnode(vm, undefined, undefined, undefined, undefined, text);
+  }
+
+  function vnode(vm, tag, key, data, children, text) {
+    return {
+      vm: vm,
+      tag: tag,
+      key: key,
+      data: data,
+      children: children,
+      text: text
+    };
+  }
+
+  function patch(oldVnode, vnode) {
+    console.log('oldVnode', oldVnode);
+    console.log('vnode', vnode);
+  }
+
   function initLifecycle(Vue) {
-    Vue.prototype._update = function () {
-      console.log('upate');
+    Vue.prototype._update = function (vnode) {
+      console.log('upate', vnode);
+      this.$el = patch(this.$el, vnode);
+    };
+
+    Vue.prototype._c = function () {
+      return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+
+    Vue.prototype._v = function () {
+      return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+
+    Vue.prototype._s = function (val) {
+      if (_typeof(val) !== 'object') return val;
+      return JSON.stringify(val);
     };
 
     Vue.prototype._render = function () {
-      console.log('render');
+      var vm = this;
+      return vm.$options.render.call(vm);
     };
+  }
+  function mountComponent(vm, el) {
+    // 1 调用render方法 产生虚拟节点
+    var VNode = vm._render(); // 2 将vnode变成真实DOM 放到页面中
+
+
+    vm._update(VNode);
   }
 
   function initMixin(Vue) {
@@ -527,6 +583,9 @@
           options.render = render;
         }
       } // 挂载
+
+
+      mountComponent(vm);
     };
   }
 
