@@ -8,7 +8,7 @@
   <script src = "./vue.js"></script>
 </head>
 <body>
-    <div id = "app"  style = "color:red;font-size:12">123{{name}}467{{name}}<h1>67676</h1></div>
+    <div id = "app"  style = "color:red;font-size:12" key = "234">123{{name}}467{{name}}<h1>67676</h1></div>
     <script>
       let vm = new Vue({
         el:"#app",
@@ -37,6 +37,7 @@
         //  vm._data.user.age = "19"
 
         vm.name = "xm"
+        vm._update(vm._render()) //手动更新
       },1000)
     </script>
 </body>

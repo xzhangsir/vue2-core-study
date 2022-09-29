@@ -4,7 +4,7 @@ export function createElementVNode(vm, tag, data, ...children) {
   if (key) {
     delete data.key
   }
-  return vnode(vm, tag, data.key, data, children)
+  return vnode(vm, tag, key, data, children)
 }
 export function createTextVNode(vm, text) {
   return vnode(vm, undefined, undefined, undefined, undefined, text)

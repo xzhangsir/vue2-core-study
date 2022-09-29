@@ -13,22 +13,21 @@ export function initMixin(Vue) {
   }
   Vue.prototype.$mount = function (el) {
     let vm = this
+    el = document.querySelector(el)
+    vm.$el = el
     let options = vm.$options
     if (!options.render) {
       //先找render 没有render 找template
       let tempalte = options.tempalte
       if (!tempalte && el) {
         //没有template 用外部的html
-        el = document.querySelector(el).outerHTML
-      } else {
-        el = tempalte
-      }
-      if (el) {
+        el = el.outerHTML
         let render = compileToFunction(el)
         console.log('render', render)
         options.render = render
       }
     }
+
     // 挂载
     mountComponent(vm, el)
   }

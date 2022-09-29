@@ -4,7 +4,8 @@ import { patch } from './vdom/patch'
 export function initLifecycle(Vue) {
   Vue.prototype._update = function (vnode) {
     console.log('upate', vnode)
-    this.$el = patch(this.$el, vnode)
+    let vm = this
+    vm.$el = patch(vm.$el, vnode)
   }
   Vue.prototype._c = function () {
     return createElementVNode(this, ...arguments)

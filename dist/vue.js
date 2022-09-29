@@ -497,7 +497,7 @@
       children[_key - 3] = arguments[_key];
     }
 
-    return vnode(vm, tag, data.key, data, children);
+    return vnode(vm, tag, key, data, children);
   }
   function createTextVNode(vm, text) {
     return vnode(vm, undefined, undefined, undefined, undefined, text);
@@ -516,13 +516,59 @@
 
   function patch(oldVnode, vnode) {
     console.log('oldVnode', oldVnode);
-    console.log('vnode', vnode);
+    console.log('vnode', vnode); // 初次渲染
+
+    var isRealElement = oldVnode.nodeType; // 判断是不是真实元素
+
+    if (isRealElement) {
+      // 获取真实元素
+      var elm = oldVnode; // 拿到父元素
+
+      var parentElm = elm.parentNode;
+      var newElm = createElm(vnode);
+      parentElm.insertBefore(newElm, elm.nexSibling);
+      parentElm.removeChild(elm);
+      return newElm;
+    }
+  }
+
+  function createElm(vnode) {
+    var tag = vnode.tag,
+        data = vnode.data,
+        children = vnode.children,
+        text = vnode.text;
+
+    if (typeof tag === 'string') {
+      // 标签
+      vnode.el = document.createElement(tag);
+      patchProps(vnode.el, data);
+      children.forEach(function (child) {
+        vnode.el.appendChild(createElm(child));
+      });
+    } else {
+      vnode.el = document.createTextNode(text);
+    }
+
+    return vnode.el;
+  }
+
+  function patchProps(el, props) {
+    for (var key in props) {
+      if (key === 'style') {
+        for (var styleName in props.style) {
+          el.style[styleName] = props.style[styleName];
+        }
+      } else {
+        el.setAttribute(key, props[key]);
+      }
+    }
   }
 
   function initLifecycle(Vue) {
     Vue.prototype._update = function (vnode) {
       console.log('upate', vnode);
-      this.$el = patch(this.$el, vnode);
+      var vm = this;
+      vm.$el = patch(vm.$el, vnode);
     };
 
     Vue.prototype._c = function () {
@@ -564,6 +610,8 @@
 
     Vue.prototype.$mount = function (el) {
       var vm = this;
+      el = document.querySelector(el);
+      vm.$el = el;
       var options = vm.$options;
 
       if (!options.render) {
@@ -572,12 +620,7 @@
 
         if (!tempalte && el) {
           //没有template 用外部的html
-          el = document.querySelector(el).outerHTML;
-        } else {
-          el = tempalte;
-        }
-
-        if (el) {
+          el = el.outerHTML;
           var render = compileToFunction(el);
           console.log('render', render);
           options.render = render;
