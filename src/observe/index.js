@@ -1,4 +1,5 @@
 import { ArrayMethods } from './array'
+import Dep from './dep'
 
 export function observer(data) {
   if (data === null || typeof data !== 'object') {
@@ -41,6 +42,8 @@ class Observer {
 
 function defineReactive(data, key, value) {
   observer(value)
+  // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
+  let dep = new Dep()
   Object.defineProperty(data, key, {
     get() {
       // console.log('获取key', key, value)

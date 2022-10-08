@@ -374,6 +374,17 @@
     _loop();
   }
 
+  var id$1 = 0;
+
+  var Dep = /*#__PURE__*/_createClass(function Dep() {
+    _classCallCheck(this, Dep);
+
+    this.id = id$1++;
+    this.subs = []; //这里存放这当前属性对应的watcher有哪些
+  });
+
+  Dep.target = null;
+
   function observer(data) {
     if (data === null || _typeof(data) !== 'object') {
       // data不是对象或者data为空 不劫持
@@ -428,7 +439,9 @@
   }();
 
   function defineReactive(data, key, value) {
-    observer(value);
+    observer(value); // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
+
+    new Dep();
     Object.defineProperty(data, key, {
       get: function get() {
         // console.log('获取key', key, value)
