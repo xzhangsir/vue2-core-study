@@ -47,6 +47,9 @@ function defineReactive(data, key, value) {
   Object.defineProperty(data, key, {
     get() {
       // console.log('获取key', key, value)
+      if (Dep.target) {
+        dep.depend()
+      }
       return value
     },
     set(newVal) {
@@ -54,6 +57,7 @@ function defineReactive(data, key, value) {
       if (value === newVal) return
       observer(newVal) //对设置的值 进行劫持
       value = newVal
+      dep.notify() //通知渲染watcher去更新--派发更新
     }
   })
 }

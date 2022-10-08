@@ -376,14 +376,50 @@
 
   var id$1 = 0;
 
-  var Dep = /*#__PURE__*/_createClass(function Dep() {
-    _classCallCheck(this, Dep);
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
 
-    this.id = id$1++;
-    this.subs = []; //这里存放这当前属性对应的watcher有哪些
-  });
+      this.id = id$1++;
+      this.subs = []; //这里存放这当前属性对应的watcher有哪些
+    }
 
-  Dep.target = null;
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // 把自身-dep实例存放在watcher里面
+        Dep.target.addDep(this);
+      }
+    }, {
+      key: "addWatcher",
+      value: function addWatcher(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        //   依次执行subs里面的watcher更新方法
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  Dep.target = null; // 用栈来保存watcher
+
+  var targetStack = [];
+  function pushTarget(watcher) {
+    targetStack.push(watcher);
+    Dep.target = watcher; // Dep.target指向当前watcher
+  }
+  function popTarget() {
+    targetStack.pop(); // 当前watcher出栈 拿到上一个watcher
+
+    Dep.target = targetStack[targetStack.length - 1];
+  }
 
   function observer(data) {
     if (data === null || _typeof(data) !== 'object') {
@@ -441,10 +477,14 @@
   function defineReactive(data, key, value) {
     observer(value); // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
 
-    new Dep();
+    var dep = new Dep();
     Object.defineProperty(data, key, {
       get: function get() {
         // console.log('获取key', key, value)
+        if (Dep.target) {
+          dep.depend();
+        }
+
         return value;
       },
       set: function set(newVal) {
@@ -453,6 +493,7 @@
         observer(newVal); //对设置的值 进行劫持
 
         value = newVal;
+        dep.notify(); //通知渲染watcher去更新--派发更新
       }
     });
   }
@@ -511,6 +552,9 @@
       this.cb = cb; //回调函数 比如在watcher更新之前可以执行beforeUpdate方法
 
       this.options = options;
+      this.deps = []; //存放dep的容器
+
+      this.depsId = new Set(); //保证deps中的dep是唯一的
 
       if (typeof exprOrFn === 'function') {
         this.getter = exprOrFn;
@@ -523,7 +567,29 @@
     _createClass(Wathcer, [{
       key: "get",
       value: function get() {
-        this.getter();
+        // 在调用方法之前先把当前watcher实例推到全局Dep.target上
+        pushTarget(this); //如果watcher是渲染watcher 那么就相当于执行  vm._update(vm._render()) 这个方法在render函数执行的时候会取值 从而实现依赖收集
+
+        this.getter(); // 在调用方法之后把当前watcher实例从全局Dep.target移除
+
+        popTarget();
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.depsId.add(id);
+          this.deps = dep;
+          dep.addWatcher(this);
+        }
+      } // 更新
+
+    }, {
+      key: "update",
+      value: function update() {
+        this.get();
       }
     }]);
 
