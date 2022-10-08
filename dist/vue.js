@@ -346,7 +346,9 @@
         args[_key] = arguments[_key];
       }
 
-      var result = oldArrayMethods[method].apply(this, args);
+      var result = oldArrayMethods[method].apply(this, args); // this代表的就是数据本身 比如数据是{a:[1,2,3]} 那么我们使用a.push(4)  this就是a  ob就是a.__ob__ 这个属性代表的是该数据已经被响应式观察过了 __ob__对象指的就是Observer实例
+
+      var ob = this.__ob__;
       var inserted; // 新增的值
 
       switch (method) {
@@ -363,9 +365,11 @@
 
       if (inserted) {
         //对新增的内容进行劫持
-        this.__ob__.observeArray(inserted);
-      }
+        ob.observeArray(inserted);
+      } //数组派发更新 ob指的就是数组对应的Observer实例 我们在get的时候判断如果属性的值还是对象那么就在Observer实例的dep收集依赖 所以这里是一一对应的  可以直接更新
 
+
+      ob.dep.notify();
       return result;
     };
   };
@@ -435,7 +439,8 @@
     function Observer(value) {
       _classCallCheck(this, Observer);
 
-      // 给 value 添加一个属性
+      this.dep = new Dep(); // 给 value 添加一个属性
+
       Object.defineProperty(value, '__ob__', {
         enumerable: false,
         //不可枚举
@@ -474,8 +479,19 @@
     return Observer;
   }();
 
+  function dependArray(value) {
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
+
   function defineReactive(data, key, value) {
-    observer(value); // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
+    var childOb = observer(value); // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
 
     var dep = new Dep();
     Object.defineProperty(data, key, {
@@ -483,6 +499,14 @@
         // console.log('获取key', key, value)
         if (Dep.target) {
           dep.depend();
+
+          if (childOb) {
+            childOb.dep.depend(); // 数组里面嵌套数组
+
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
+          }
         }
 
         return value;

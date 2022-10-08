@@ -12,6 +12,7 @@ export function observer(data) {
 
 class Observer {
   constructor(value) {
+    this.dep = new Dep()
     // 给 value 添加一个属性
     Object.defineProperty(value, '__ob__', {
       enumerable: false, //不可枚举
@@ -40,8 +41,18 @@ class Observer {
   }
 }
 
+function dependArray(value) {
+  for (let i = 0; i < value.length; i++) {
+    let current = value[i]
+    current.__ob__ && current.__ob__.dep.depend()
+    if (Array.isArray(current)) {
+      dependArray(current)
+    }
+  }
+}
+
 function defineReactive(data, key, value) {
-  observer(value)
+  let childOb = observer(value)
   // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
   let dep = new Dep()
   Object.defineProperty(data, key, {
@@ -49,6 +60,13 @@ function defineReactive(data, key, value) {
       // console.log('获取key', key, value)
       if (Dep.target) {
         dep.depend()
+        if (childOb) {
+          childOb.dep.depend()
+          // 数组里面嵌套数组
+          if (Array.isArray(value)) {
+            dependArray(value)
+          }
+        }
       }
       return value
     },
