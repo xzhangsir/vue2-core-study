@@ -485,6 +485,38 @@
     });
   }
 
+  var id = 0;
+
+  var Wathcer = /*#__PURE__*/function () {
+    function Wathcer(vm, exprOrFn, cb, options) {
+      _classCallCheck(this, Wathcer);
+
+      this.id = id++; // watcher的唯一标识
+
+      this.vm = vm;
+      this.exprOrFn = exprOrFn;
+      this.cb = cb; //回调函数 比如在watcher更新之前可以执行beforeUpdate方法
+
+      this.options = options;
+
+      if (typeof exprOrFn === 'function') {
+        this.getter = exprOrFn;
+      } // 实例化就会默认调用get方法
+
+
+      this.get();
+    }
+
+    _createClass(Wathcer, [{
+      key: "get",
+      value: function get() {
+        this.getter();
+      }
+    }]);
+
+    return Wathcer;
+  }();
+
   function createElementVNode(vm, tag, data) {
     data = data || {};
     var key = data.key;
@@ -590,11 +622,17 @@
     };
   }
   function mountComponent(vm, el) {
+    /*
     // 1 调用render方法 产生虚拟节点
-    var VNode = vm._render(); // 2 将vnode变成真实DOM 放到页面中
+    let VNode = vm._render()
+    // 2 将vnode变成真实DOM 放到页面中
+    vm._update(VNode)
+    */
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
 
-
-    vm._update(VNode);
+    new Wathcer(vm, updateComponent, null, true);
   }
 
   function initMixin(Vue) {
