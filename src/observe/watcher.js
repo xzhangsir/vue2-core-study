@@ -1,4 +1,5 @@
 import { popTarget, pushTarget } from './dep'
+import { queueWatcher } from './scheduler'
 
 let id = 0
 
@@ -35,6 +36,14 @@ class Wathcer {
   }
   // 更新
   update() {
+    /*   console.log('我更新了')
+    this.get() */
+    // 异步更新 每次watcher更新的时候 先将它用一个队列缓存起来 之后再一起调用
+    queueWatcher(this)
+  }
+  run() {
+    // 真正的触发更新
+    console.log('我真正的更新了')
     this.get()
   }
 }

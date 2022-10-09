@@ -500,7 +500,7 @@
         if (Dep.target) {
           dep.depend();
 
-          if (childOb) {
+          if (childOb && childOb.dep) {
             childOb.dep.depend(); // 数组里面嵌套数组
 
             if (Array.isArray(value)) {
@@ -563,6 +563,35 @@
     });
   }
 
+  var queue = []; //存放watcher的队列
+
+  var has = {}; //watcher去重
+
+  var pending = false;
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (!has[id]) {
+      has[id] = true;
+      queue.push(watcher); // 不管我们的update执行多少次 但是最终只执行一轮刷新操作
+
+      if (!pending) {
+        setTimeout(flushSchedulerQueue, 0);
+        pending = true;
+      }
+    }
+  }
+
+  function flushSchedulerQueue() {
+    var flushQueue = queue.slice(0);
+    flushQueue.forEach(function (q) {
+      return q.run();
+    });
+    queue = [];
+    has = {};
+    pending = false;
+  }
+
   var id = 0;
 
   var Wathcer = /*#__PURE__*/function () {
@@ -613,6 +642,16 @@
     }, {
       key: "update",
       value: function update() {
+        /*   console.log('我更新了')
+        this.get() */
+        // 异步更新 每次watcher更新的时候 先将它用一个队列缓存起来 之后再一起调用
+        queueWatcher(this);
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        // 真正的触发更新
+        console.log('我真正的更新了');
         this.get();
       }
     }]);
@@ -650,9 +689,9 @@
   }
 
   function patch(oldVnode, vnode) {
-    console.log('oldVnode', oldVnode);
-    console.log('vnode', vnode); // 初次渲染
-
+    // console.log('oldVnode', oldVnode)
+    // console.log('vnode', vnode)
+    // 初次渲染
     var isRealElement = oldVnode.nodeType; // 判断是不是真实元素
 
     if (isRealElement) {

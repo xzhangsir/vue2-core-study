@@ -1,6 +1,6 @@
 export function patch(oldVnode, vnode) {
-  console.log('oldVnode', oldVnode)
-  console.log('vnode', vnode)
+  // console.log('oldVnode', oldVnode)
+  // console.log('vnode', vnode)
   // 初次渲染
   const isRealElement = oldVnode.nodeType
   // 判断是不是真实元素

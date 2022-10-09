@@ -60,7 +60,7 @@ function defineReactive(data, key, value) {
       // console.log('获取key', key, value)
       if (Dep.target) {
         dep.depend()
-        if (childOb) {
+        if (childOb && childOb.dep) {
           childOb.dep.depend()
           // 数组里面嵌套数组
           if (Array.isArray(value)) {
