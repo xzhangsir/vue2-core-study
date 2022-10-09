@@ -425,7 +425,7 @@
     Dep.target = targetStack[targetStack.length - 1];
   }
 
-  function observer(data) {
+  function observer$1(data) {
     if (data === null || _typeof(data) !== 'object') {
       // data不是对象或者data为空 不劫持
       return data;
@@ -471,7 +471,7 @@
       key: "observeArray",
       value: function observeArray(data) {
         for (var i = 0; i < data.length; i++) {
-          observer(data[i]);
+          observer$1(data[i]);
         }
       }
     }]);
@@ -491,7 +491,7 @@
   }
 
   function defineReactive(data, key, value) {
-    var childOb = observer(value); // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
+    var childOb = observer$1(value); // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
 
     var dep = new Dep();
     Object.defineProperty(data, key, {
@@ -514,7 +514,7 @@
       set: function set(newVal) {
         // console.log('设置key', key, newVal)
         if (value === newVal) return;
-        observer(newVal); //对设置的值 进行劫持
+        observer$1(newVal); //对设置的值 进行劫持
 
         value = newVal;
         dep.notify(); //通知渲染watcher去更新--派发更新
@@ -549,7 +549,7 @@
     } // 对data中的数据进行劫持
 
 
-    observer(data);
+    observer$1(data);
   }
 
   function proxy(vm, source, key) {
@@ -563,22 +563,78 @@
     });
   }
 
+  var callbacks = [];
+  var pending = false;
+
+  function flushCallbacks() {
+    var cbs = callbacks.slice(0);
+    pending = false;
+    callbacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  } // nextTick 内部没有直接使用setTimeout 而是采用优雅降级的方式
+  // 内部先采用promise (ie不兼容)
+  // MutationObserver
+  // 考虑IE专享的 setImmediate
+  // 实在不行 就用 setTimeout
+
+
+  var timerFunc;
+
+  if (typeof Promise !== 'undefined') {
+    // 如果支持 Promise
+    var p = Promise.resolve();
+
+    timerFunc = function timerFunc() {
+      p.then(flushCallbacks);
+    };
+  } else if (typeof MutationObserver !== 'undefined') {
+    // MutationObserver 主要监听dom变化
+    var counter = 1;
+    var observer = new MutationObserver(flushCallbacks);
+    var textNode = document.createTextNode(String(counter));
+    observer.observe(textNode, {
+      characterData: true
+    });
+
+    timerFunc = function timerFunc() {
+      counter = (counter + 1) % 2;
+      textNode.data = String(counter); //counter变化    flushCallbacks执行
+    };
+  } else if (setImmediate) {
+    timerFunc = function timerFunc() {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(flushCallbacks, 0);
+    };
+  }
+
+  function nextTick(cb) {
+    //除了渲染watcher  还有用户自己手动调用的nextTick 一起被收集到数组
+    callbacks.push(cb);
+
+    if (!pending) {
+      //如果多次调用nextTick  只会执行一次异步 等异步队列清空之后再把标志变为false
+      pending = true;
+      timerFunc();
+    }
+  }
+
   var queue = []; //存放watcher的队列
 
   var has = {}; //watcher去重
 
-  var pending = false;
   function queueWatcher(watcher) {
     var id = watcher.id;
 
     if (!has[id]) {
       has[id] = true;
-      queue.push(watcher); // 不管我们的update执行多少次 但是最终只执行一轮刷新操作
+      queue.push(watcher); //  进行异步调用
 
-      if (!pending) {
-        setTimeout(flushSchedulerQueue, 0);
-        pending = true;
-      }
+      nextTick(flushSchedulerQueue);
     }
   }
 
@@ -589,7 +645,6 @@
     });
     queue = [];
     has = {};
-    pending = false;
   }
 
   var id = 0;
@@ -818,6 +873,7 @@
 
   initMixin(Vue);
   initLifecycle(Vue);
+  Vue.prototype.$nextTick = nextTick;
 
   return Vue;
 
