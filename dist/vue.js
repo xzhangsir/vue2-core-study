@@ -4,69 +4,6 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
-  // 定义生命周期
-  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed']; // 策略
-
-  var strats = {}; // 为生命周期添加合并策略
-
-  LIFECYCLE_HOOKS.forEach(function (hook) {
-    strats[hook] = mergeHook;
-  }); //生命周期合并策略
-
-  function mergeHook(parentVal, childVal) {
-    // 如果有儿子
-    if (childVal) {
-      if (parentVal) {
-        return parentVal.concat(childVal);
-      } else {
-        return [childVal];
-      }
-    } else {
-      return parentVal;
-    }
-  }
-
-  function mergeOptions(parent, child) {
-    // console.log(parent, child)
-    var options = {}; // 遍历父亲
-
-    for (var k in parent) {
-      // console.log('parent', k)
-      mergeField(k);
-    } // 父亲没有  儿子有
-
-
-    for (var _k in child) {
-      if (!parent.hasOwnProperty(_k)) {
-        // console.log('child', child)
-        mergeField(_k);
-      }
-    }
-
-    function mergeField(k) {
-      if (strats[k]) {
-        options[k] = strats[k](parent[k], child[k]);
-      } else {
-        // 默认策略
-        options[k] = child[k] ? child[k] : parent[k];
-      }
-    }
-
-    return options;
-  }
-
-  function initGlobalAPI(Vue) {
-    Vue.options = {};
-
-    Vue.mixin = function (mixin) {
-      // 将用户的选型和全局的options进行合并
-      // {} {created:function(){}} => {created:[fn]} //第一次
-      // {created:[fn]} {created:[fn]} => {created:[fn,fn]} //再一次
-      this.options = mergeOptions(this.options, mixin);
-      return this;
-    };
-  }
-
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -395,6 +332,69 @@
 
     var render = new Function(code);
     return render;
+  }
+
+  // 定义生命周期
+  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed']; // 策略
+
+  var strats = {}; // 为生命周期添加合并策略
+
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    strats[hook] = mergeHook;
+  }); //生命周期合并策略
+
+  function mergeHook(parentVal, childVal) {
+    // 如果有儿子
+    if (childVal) {
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+
+  function mergeOptions(parent, child) {
+    // console.log(parent, child)
+    var options = {}; // 遍历父亲
+
+    for (var k in parent) {
+      // console.log('parent', k)
+      mergeField(k);
+    } // 父亲没有  儿子有
+
+
+    for (var _k in child) {
+      if (!parent.hasOwnProperty(_k)) {
+        // console.log('child', child)
+        mergeField(_k);
+      }
+    }
+
+    function mergeField(k) {
+      if (strats[k]) {
+        options[k] = strats[k](parent[k], child[k]);
+      } else {
+        // 默认策略
+        options[k] = child[k] ? child[k] : parent[k];
+      }
+    }
+
+    return options;
+  }
+
+  function initGlobalAPI(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      // 将用户的选型和全局的options进行合并
+      // {} {created:function(){}} => {created:[fn]} //第一次
+      // {created:[fn]} {created:[fn]} => {created:[fn,fn]} //再一次
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
   }
 
   var oldArrayMethods = Array.prototype;
@@ -804,6 +804,11 @@
       children: children,
       text: text
     };
+  } // 判断两个虚拟节点是不是同一个
+
+
+  function isSameVnode(vnode1, vnode2) {
+    return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
   }
 
   function patch(oldVnode, vnode) {
@@ -821,6 +826,25 @@
       parentElm.insertBefore(newElm, elm.nexSibling);
       parentElm.removeChild(elm);
       return newElm;
+    } else {
+      // diff 算法
+      // diff算法是个平级比较的过程 父亲和父亲比较 儿子和儿子比较
+      // 1 两节点不是同一个节点 直接删除老的 换上新的 (没有比对了)
+      // 2 两个节点是同一个节点 (判断节点的tag和节点的key)
+      // 比较两个节点的属性是否有差异 (复用老的节点 将差异的属性更新)
+      // 3 节点比较完  开始比较儿子
+      console.log(oldVnode);
+      console.log(vnode);
+      patchVnode(oldVnode, vnode);
+    }
+  }
+
+  function patchVnode(oldVNode, vnode) {
+    if (!isSameVnode(oldVNode, vnode)) {
+      // 新老节点不相同 直接用新的替换掉老的
+      var el = createElm(vnode);
+      oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
+      return el;
     }
   }
 
@@ -958,6 +982,28 @@
   initGlobalAPI(Vue); //mixin
 
   Vue.prototype.$nextTick = nextTick;
+
+  window.onload = function () {
+    var render1 = compileToFunction("\n  <ol style = \"color:red\">\n    <li key = 'a'>a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n  </ol>");
+    var vm1 = new Vue({
+      data: {
+        name: 'zx'
+      }
+    });
+    var prevVnode = render1.call(vm1);
+    var el = createElm(prevVnode);
+    document.body.appendChild(el);
+    var render2 = compileToFunction("\n  <ul  style = \"color:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n    <li key=\"d\">d</li>\n  </ul>");
+    var vm2 = new Vue({
+      data: {
+        name: 'xm'
+      }
+    });
+    var nextVnode = render2.call(vm2);
+    setTimeout(function () {
+      patch(prevVnode, nextVnode);
+    }, 1000);
+  };
 
   return Vue;
 
