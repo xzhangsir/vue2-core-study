@@ -1,12 +1,19 @@
 import { compileToFunction } from './compile/index'
 import { initState } from './initState'
-import { mountComponent } from './lifecycle'
+import { callHook, mountComponent } from './lifecycle'
+import { mergeOptions } from './utils/index'
 
 export function initMixin(Vue) {
   Vue.prototype.__init = function (options) {
     let vm = this
-    vm.$options = options
+    // vm.$options = options
+    // console.log('vm.constructor.options', vm.constructor.options)
+    // console.log('options', options)
+    vm.$options = mergeOptions(vm.constructor.options, options)
+    console.log(vm)
+    callHook(vm, 'beforeCreate') //初始化数据之前
     initState(vm)
+    callHook(vm, 'created') //初始化数据之后
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)
     }
@@ -23,7 +30,7 @@ export function initMixin(Vue) {
         //没有template 用外部的html
         el = el.outerHTML
         let render = compileToFunction(el)
-        console.log('render', render)
+        // console.log('render', render)
         options.render = render
       }
     }

@@ -4,7 +4,7 @@ import { patch } from './vdom/patch'
 
 export function initLifecycle(Vue) {
   Vue.prototype._update = function (vnode) {
-    console.log('upate', vnode)
+    // console.log('upate', vnode)
     let vm = this
     vm.$el = patch(vm.$el, vnode)
   }
@@ -31,8 +31,17 @@ export function mountComponent(vm, el) {
   // 2 将vnode变成真实DOM 放到页面中
   vm._update(VNode)
   */
+  callHook(vm, 'beforeMount') //初始渲染之前
   let updateComponent = () => {
     vm._update(vm._render())
   }
   new Wathcer(vm, updateComponent, null, true)
+  callHook(vm, 'mounted') //渲染完成之后
+}
+
+export function callHook(vm, hook) {
+  const handlers = vm.$options[hook]
+  if (handlers) {
+    handlers.forEach((handler) => handler.call(vm))
+  }
 }

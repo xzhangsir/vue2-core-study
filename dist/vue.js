@@ -4,6 +4,69 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  // 定义生命周期
+  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed']; // 策略
+
+  var strats = {}; // 为生命周期添加合并策略
+
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    strats[hook] = mergeHook;
+  }); //生命周期合并策略
+
+  function mergeHook(parentVal, childVal) {
+    // 如果有儿子
+    if (childVal) {
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+
+  function mergeOptions(parent, child) {
+    // console.log(parent, child)
+    var options = {}; // 遍历父亲
+
+    for (var k in parent) {
+      // console.log('parent', k)
+      mergeField(k);
+    } // 父亲没有  儿子有
+
+
+    for (var _k in child) {
+      if (!parent.hasOwnProperty(_k)) {
+        // console.log('child', child)
+        mergeField(_k);
+      }
+    }
+
+    function mergeField(k) {
+      if (strats[k]) {
+        options[k] = strats[k](parent[k], child[k]);
+      } else {
+        // 默认策略
+        options[k] = child[k] ? child[k] : parent[k];
+      }
+    }
+
+    return options;
+  }
+
+  function initGlobalAPI(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      // 将用户的选型和全局的options进行合并
+      // {} {created:function(){}} => {created:[fn]} //第一次
+      // {created:[fn]} {created:[fn]} => {created:[fn,fn]} //再一次
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -795,7 +858,7 @@
 
   function initLifecycle(Vue) {
     Vue.prototype._update = function (vnode) {
-      console.log('upate', vnode);
+      // console.log('upate', vnode)
       var vm = this;
       vm.$el = patch(vm.$el, vnode);
     };
@@ -825,18 +888,37 @@
     // 2 将vnode变成真实DOM 放到页面中
     vm._update(VNode)
     */
+    callHook(vm, 'beforeMount'); //初始渲染之前
+
     var updateComponent = function updateComponent() {
       vm._update(vm._render());
     };
 
     new Wathcer(vm, updateComponent, null, true);
+    callHook(vm, 'mounted'); //渲染完成之后
+  }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+
+    if (handlers) {
+      handlers.forEach(function (handler) {
+        return handler.call(vm);
+      });
+    }
   }
 
   function initMixin(Vue) {
     Vue.prototype.__init = function (options) {
-      var vm = this;
-      vm.$options = options;
+      var vm = this; // vm.$options = options
+      // console.log('vm.constructor.options', vm.constructor.options)
+      // console.log('options', options)
+
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      console.log(vm);
+      callHook(vm, 'beforeCreate'); //初始化数据之前
+
       initState(vm);
+      callHook(vm, 'created'); //初始化数据之后
 
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
@@ -856,8 +938,8 @@
         if (!tempalte && el) {
           //没有template 用外部的html
           el = el.outerHTML;
-          var render = compileToFunction(el);
-          console.log('render', render);
+          var render = compileToFunction(el); // console.log('render', render)
+
           options.render = render;
         }
       } // 挂载
@@ -873,6 +955,8 @@
 
   initMixin(Vue);
   initLifecycle(Vue);
+  initGlobalAPI(Vue); //mixin
+
   Vue.prototype.$nextTick = nextTick;
 
   return Vue;
