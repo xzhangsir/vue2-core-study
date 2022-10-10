@@ -91,6 +91,20 @@ function updateChildren(el, oldChildren, newChildren) {
       patch(oldEndVnode, newEndVnode)
       oldEndVnode = oldChildren[--oldEndIndex]
       newEndVnode = newChildren[--newEndIndex]
+    } else if (isSameVnode(oldStartVnode, newEndVnode)) {
+      // 交叉比对 老的头和新的尾比较  abcd=>
+      //                            dcba
+      patch(oldStartVnode, newEndVnode)
+      el.insertBefore(oldStartVnode.el, oldEndVnode.el.nexSibling)
+      oldStartVnode = oldChildren[++oldStartIndex]
+      newEndVnode = newChildren[--newEndIndex]
+    } else if (isSameVnode(oldEndVnode, newStartVnode)) {
+      // 交叉比对 旧的尾和新的头比较  abcd =>
+      //                            dcba
+      patch(oldEndVnode, newStartVnode)
+      el.insertBefore(oldEndVnode.el, oldStartVnode.el)
+      oldEndVnode = oldChildren[--oldEndIndex]
+      newStartVnode = newChildren[++newStartIndex]
     }
   }
   // 如果老节点循环完毕了 但是新节点还有  证明  新节点需要被添加到头部或者尾部
@@ -156,3 +170,5 @@ function patchProps(el, oldProps = {}, props = {}) {
     }
   }
 }
+
+// 再把所有旧子节点的 key 做一个映射到旧节点下标的 key -> index 表，然后用新 vnode 的 key 去找出在旧节点中可以复用的位置。
