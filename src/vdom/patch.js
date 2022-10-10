@@ -66,9 +66,51 @@ function patchVnode(oldVNode, vnode) {
   }
   return el
 }
-
+// diff核心 双指针
 function updateChildren(el, oldChildren, newChildren) {
   console.log(el, oldChildren, newChildren)
+  let oldStartIndex = 0
+  let newStartIndex = 0
+  let oldEndIndex = oldChildren.length - 1
+  let newEndIndex = newChildren.length - 1
+
+  let oldStartVnode = oldChildren[0]
+  let newStartVnode = newChildren[0]
+  let oldEndVnode = oldChildren[oldEndIndex]
+  let newEndVnode = newChildren[newEndIndex]
+  // 只有当新老儿子的双指标的起始位置不大于结束位置的时候  才能循环 一方停止了就需要结束循环
+  while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+    if (isSameVnode(oldStartVnode, newStartVnode)) {
+      // 头头比较
+      // 递归比较儿子及儿子的子节点
+      patch(oldStartVnode, newStartVnode)
+      oldStartVnode = oldChildren[++oldStartIndex]
+      newStartVnode = newChildren[++newStartIndex]
+    } else if (isSameVnode(oldEndVnode, newEndVnode)) {
+      // 尾尾比较
+      patch(oldEndVnode, newEndVnode)
+      oldEndVnode = oldChildren[--oldEndIndex]
+      newEndVnode = newChildren[--newEndIndex]
+    }
+  }
+  // 如果老节点循环完毕了 但是新节点还有  证明  新节点需要被添加到头部或者尾部
+  if (newStartIndex <= newEndIndex) {
+    for (let i = newStartIndex; i <= newEndIndex; i++) {
+      let childEl = createElm(newChildren[i])
+      let anchor = newChildren[newEndIndex + 1]
+        ? newChildren[newEndIndex + 1].el
+        : null
+      //anchor为null的时候 等同于appendChild
+      el.insertBefore(childEl, anchor)
+    }
+  }
+  // 如果新节点循环完毕 老节点还有  证明老的节点需要直接被删除
+  if (oldStartIndex <= oldEndIndex) {
+    for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+      let childEl = oldChildren[i].el
+      el.removeChild(childEl)
+    }
+  }
 }
 
 export function createElm(vnode) {

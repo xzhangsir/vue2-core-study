@@ -880,10 +880,52 @@
     }
 
     return el;
-  }
+  } // diff核心 双指针
+
 
   function updateChildren(el, oldChildren, newChildren) {
     console.log(el, oldChildren, newChildren);
+    var oldStartIndex = 0;
+    var newStartIndex = 0;
+    var oldEndIndex = oldChildren.length - 1;
+    var newEndIndex = newChildren.length - 1;
+    var oldStartVnode = oldChildren[0];
+    var newStartVnode = newChildren[0];
+    var oldEndVnode = oldChildren[oldEndIndex];
+    var newEndVnode = newChildren[newEndIndex]; // 只有当新老儿子的双指标的起始位置不大于结束位置的时候  才能循环 一方停止了就需要结束循环
+
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      if (isSameVnode(oldStartVnode, newStartVnode)) {
+        // 头头比较
+        // 递归比较儿子及儿子的子节点
+        patch(oldStartVnode, newStartVnode);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        // 尾尾比较
+        patch(oldEndVnode, newEndVnode);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      }
+    } // 如果老节点循环完毕了 但是新节点还有  证明  新节点需要被添加到头部或者尾部
+
+
+    if (newStartIndex <= newEndIndex) {
+      for (var i = newStartIndex; i <= newEndIndex; i++) {
+        var childEl = createElm(newChildren[i]);
+        var anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null; //anchor为null的时候 等同于appendChild
+
+        el.insertBefore(childEl, anchor);
+      }
+    } // 如果新节点循环完毕 老节点还有  证明老的节点需要直接被删除
+
+
+    if (oldStartIndex <= oldEndIndex) {
+      for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
+        var _childEl = oldChildren[_i].el;
+        el.removeChild(_childEl);
+      }
+    }
   }
 
   function createElm(vnode) {
@@ -1059,7 +1101,7 @@
     var nextVnode = render2.call(vm2);
     setTimeout(function () {
       patch(prevVnode, nextVnode);
-    }, 1000);
+    }, 3000);
   };
 
   return Vue;

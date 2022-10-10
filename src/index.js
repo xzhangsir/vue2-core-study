@@ -41,5 +41,5 @@ window.onload = function () {
 
   setTimeout(() => {
     patch(prevVnode, nextVnode)
-  }, 1000)
+  }, 3000)
 }
