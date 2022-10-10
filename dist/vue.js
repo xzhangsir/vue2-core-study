@@ -892,10 +892,26 @@
     var oldStartVnode = oldChildren[0];
     var newStartVnode = newChildren[0];
     var oldEndVnode = oldChildren[oldEndIndex];
-    var newEndVnode = newChildren[newEndIndex]; // 只有当新老儿子的双指标的起始位置不大于结束位置的时候  才能循环 一方停止了就需要结束循环
+    var newEndVnode = newChildren[newEndIndex]; // 根据key来创建老的儿子的index映射表  类似 {'a':0,'b':1} 代表key为'a'的节点在第一个位置 key为'b'的节点在第二个位置
+
+    function makeIndexByKey(children) {
+      var map = {};
+      children.forEach(function (item, index) {
+        map[item.key] = index;
+      });
+      return map;
+    } // 根据旧的节点生成 key和index的映射表 用于乱序比对
+
+
+    var map = makeIndexByKey(oldChildren); // 只有当新老儿子的双指标的起始位置不大于结束位置的时候  才能循环 一方停止了就需要结束循环
 
     while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
-      if (isSameVnode(oldStartVnode, newStartVnode)) {
+      // 因为乱序对比过程把移动的vnode置为 undefined 如果不存在vnode节点 直接跳过
+      if (!oldStartVnode) {
+        oldStartVnode = oldChildren[++oldStartIndex];
+      } else if (!oldEndVnode) {
+        oldEndVnode = oldChildren[--oldEndIndex];
+      } else if (isSameVnode(oldStartVnode, newStartVnode)) {
         // 头头比较
         // 递归比较儿子及儿子的子节点
         patch(oldStartVnode, newStartVnode);
@@ -919,6 +935,26 @@
         patch(oldEndVnode, newStartVnode);
         el.insertBefore(oldEndVnode.el, oldStartVnode.el);
         oldEndVnode = oldChildren[--oldEndIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else {
+        // 乱序比对  abcd=>bmapcq
+        // 根据老的列表做一个映射关系 用新的去老的里面找 找到则移动 找不到则添加 最后多余的删除
+        // 再把所有旧子节点的 key 做一个映射到旧节点下标的 key -> index 表，然后用新 vnode 的 key 去找出在旧节点中可以复用的位置。
+        var moveIndex = map[newStartVnode.key];
+
+        if (moveIndex !== undefined) {
+          // 新的节点可以在旧节点中找到则移动
+          var moveVnode = oldChildren[moveIndex]; //占位操作 避免数组塌陷  防止老节点移动走了之后破坏了初始的映射表位置
+
+          oldChildren[moveIndex] = undefined; //把找到的节点移动到最前面
+
+          el.insertBefore(moveVnode.el, oldStartVnode.el);
+          patch(moveVnode, newStartVnode);
+        } else {
+          // 新的节点在旧节点中找不到则添加
+          el.insertBefore(createElm(newStartVnode), oldStartVnode.el);
+        }
+
         newStartVnode = newChildren[++newStartIndex];
       }
     } // 如果老节点循环完毕了 但是新节点还有  证明  新节点需要被添加到头部或者尾部
@@ -991,7 +1027,7 @@
         el.setAttribute(_key2, props[_key2]);
       }
     }
-  } // 再把所有旧子节点的 key 做一个映射到旧节点下标的 key -> index 表，然后用新 vnode 的 key 去找出在旧节点中可以复用的位置。
+  }
 
   function initLifecycle(Vue) {
     Vue.prototype._update = function (vnode) {
@@ -1097,7 +1133,7 @@
   Vue.prototype.$nextTick = nextTick;
 
   window.onload = function () {
-    var render1 = compileToFunction("\n  <ul style = \"color:green\">\n    <li key = 'a'>a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n  </ul>");
+    var render1 = compileToFunction("\n  <ul style = \"color:green\">\n    <li key=\"e\">e</li>\n    <li key=\"d\">d</li>\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n  </ul>");
     var vm1 = new Vue({
       data: {
         name: 'zx'

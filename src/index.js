@@ -20,7 +20,9 @@ export default Vue
 window.onload = function () {
   let render1 = compileToFunction(`
   <ul style = "color:green">
-    <li key = 'a'>a</li>
+    <li key="e">e</li>
+    <li key="d">d</li>
+    <li key="a">a</li>
     <li key="b">b</li>
     <li key="c">c</li>
   </ul>`)
