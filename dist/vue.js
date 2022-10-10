@@ -833,8 +833,8 @@
       // 2 两个节点是同一个节点 (判断节点的tag和节点的key)
       // 比较两个节点的属性是否有差异 (复用老的节点 将差异的属性更新)
       // 3 节点比较完  开始比较儿子
-      console.log(oldVnode);
-      console.log(vnode);
+      console.log('oldVnode', oldVnode);
+      console.log('newvnode', vnode);
       patchVnode(oldVnode, vnode);
     }
   }
@@ -842,10 +842,48 @@
   function patchVnode(oldVNode, vnode) {
     if (!isSameVnode(oldVNode, vnode)) {
       // 新老节点不相同 直接用新的替换掉老的
-      var el = createElm(vnode);
-      oldVNode.el.parentNode.replaceChild(el, oldVNode.el);
-      return el;
+      var _el = createElm(vnode);
+
+      oldVNode.el.parentNode.replaceChild(_el, oldVNode.el);
+      return _el;
+    } //如果旧节点是一个文本节点
+
+
+    if (!oldVNode.tag) {
+      if (oldVNode.text !== vnode.text) {
+        oldVNode.el.textContent = vnode.text;
+      }
+    } // 不符合上面两种 代表新老标签一致 并且不是文本节点
+    // 为了节点复用 所以直接把旧的虚拟dom对应的真实dom赋值给新的虚拟dom的el属性
+
+
+    var el = vnode.el = oldVNode.el; // 更新属性
+
+    patchProps(el, oldVNode.data, vnode.data); // 开始比较子节点
+
+    var oldChildren = oldVNode.children || [];
+    var newChildren = vnode.children || [];
+
+    if (oldChildren.length > 0 && newChildren.length > 0) {
+      // diff核心
+      // 新老都存在子节点
+      updateChildren(el, oldChildren, newChildren);
+    } else if (newChildren.length > 0) {
+      // 老的没有儿子  新的有儿子  创建新的儿子
+      for (var i = 0; i < newChildren.length; i++) {
+        var child = newChildren[i];
+        el.appendChild(createElm(child));
+      }
+    } else if (oldChildren.length > 0) {
+      // 新的没有 老的有 删除老的
+      el.innerHTML = '';
     }
+
+    return el;
+  }
+
+  function updateChildren(el, oldChildren, newChildren) {
+    console.log(el, oldChildren, newChildren);
   }
 
   function createElm(vnode) {
@@ -857,7 +895,7 @@
     if (typeof tag === 'string') {
       // 标签
       vnode.el = document.createElement(tag);
-      patchProps(vnode.el, data);
+      patchProps(vnode.el, {}, data);
       children.forEach(function (child) {
         vnode.el.appendChild(createElm(child));
       });
@@ -868,14 +906,33 @@
     return vnode.el;
   }
 
-  function patchProps(el, props) {
-    for (var key in props) {
-      if (key === 'style') {
+  function patchProps(el) {
+    var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    // 老的属性中有  新的没有 要删除老的 样式和其它属性
+    var oldStyles = oldProps.style || {};
+    var newStyles = props.style || {};
+
+    for (var key in oldStyles) {
+      if (!newStyles[key]) {
+        // 新的样式没有这个key 直接清空
+        el.style[key] = '';
+      }
+    }
+
+    for (var _key in oldProps) {
+      if (!props[_key]) {
+        el.removeAttribute(_key);
+      }
+    }
+
+    for (var _key2 in props) {
+      if (_key2 === 'style') {
         for (var styleName in props.style) {
           el.style[styleName] = props.style[styleName];
         }
       } else {
-        el.setAttribute(key, props[key]);
+        el.setAttribute(_key2, props[_key2]);
       }
     }
   }
@@ -984,7 +1041,7 @@
   Vue.prototype.$nextTick = nextTick;
 
   window.onload = function () {
-    var render1 = compileToFunction("\n  <ol style = \"color:red\">\n    <li key = 'a'>a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n  </ol>");
+    var render1 = compileToFunction("\n  <ul style = \"color:green\">\n    <li key = 'a'>a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n  </ul>");
     var vm1 = new Vue({
       data: {
         name: 'zx'

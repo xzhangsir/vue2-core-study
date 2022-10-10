@@ -19,11 +19,11 @@ export default Vue
 // ----diff-----为了方便观察前后的虚拟节点 测试代码------
 window.onload = function () {
   let render1 = compileToFunction(`
-  <ol style = "color:red">
+  <ul style = "color:green">
     <li key = 'a'>a</li>
     <li key="b">b</li>
     <li key="c">c</li>
-  </ol>`)
+  </ul>`)
   let vm1 = new Vue({ data: { name: 'zx' } })
   let prevVnode = render1.call(vm1)
   let el = createElm(prevVnode)
