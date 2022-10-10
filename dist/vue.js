@@ -1032,8 +1032,19 @@
   function initLifecycle(Vue) {
     Vue.prototype._update = function (vnode) {
       // console.log('upate', vnode)
-      var vm = this;
-      vm.$el = patch(vm.$el, vnode);
+      var vm = this; // vm.$el = patch(vm.$el, vnode)
+      // 保留上一个的vnode
+
+      var prevVnode = vm._vnode;
+      vm._vnode = vnode;
+
+      if (!prevVnode) {
+        // 初次渲染
+        vm.$el = patch(vm.$el, vnode);
+      } else {
+        // 上次和本次的进行diff更新
+        vm.$el = patch(prevVnode, vnode);
+      }
     };
 
     Vue.prototype._c = function () {
@@ -1132,27 +1143,35 @@
 
   Vue.prototype.$nextTick = nextTick;
 
-  window.onload = function () {
-    var render1 = compileToFunction("\n  <ul style = \"color:green\">\n    <li key=\"e\">e</li>\n    <li key=\"d\">d</li>\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n  </ul>");
-    var vm1 = new Vue({
-      data: {
-        name: 'zx'
-      }
-    });
-    var prevVnode = render1.call(vm1);
-    var el = createElm(prevVnode);
-    document.body.appendChild(el);
-    var render2 = compileToFunction("\n  <ul  style = \"color:red\">\n    <li key=\"a\">a</li>\n    <li key=\"b\">b</li>\n    <li key=\"c\">c</li>\n    <li key=\"d\">d</li>\n  </ul>");
-    var vm2 = new Vue({
-      data: {
-        name: 'xm'
-      }
-    });
-    var nextVnode = render2.call(vm2);
-    setTimeout(function () {
-      patch(prevVnode, nextVnode);
-    }, 3000);
-  };
+  /* window.onload = function () {
+    let render1 = compileToFunction(`
+    <ul style = "color:green">
+      <li key="e">e</li>
+      <li key="d">d</li>
+      <li key="a">a</li>
+      <li key="b">b</li>
+      <li key="c">c</li>
+    </ul>`)
+    let vm1 = new Vue({ data: { name: 'zx' } })
+    let prevVnode = render1.call(vm1)
+    let el = createElm(prevVnode)
+    document.body.appendChild(el)
+
+    let render2 = compileToFunction(`
+    <ul  style = "color:red">
+      <li key="a">a</li>
+      <li key="b">b</li>
+      <li key="c">c</li>
+      <li key="d">d</li>
+    </ul>`)
+    let vm2 = new Vue({ data: { name: 'xm' } })
+    let nextVnode = render2.call(vm2)
+
+    setTimeout(() => {
+      patch(prevVnode, nextVnode)
+    }, 3000)
+  }
+   */
 
   return Vue;
 

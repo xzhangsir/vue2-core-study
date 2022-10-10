@@ -6,7 +6,17 @@ export function initLifecycle(Vue) {
   Vue.prototype._update = function (vnode) {
     // console.log('upate', vnode)
     let vm = this
-    vm.$el = patch(vm.$el, vnode)
+    // vm.$el = patch(vm.$el, vnode)
+    // 保留上一个的vnode
+    const prevVnode = vm._vnode
+    vm._vnode = vnode
+    if (!prevVnode) {
+      // 初次渲染
+      vm.$el = patch(vm.$el, vnode)
+    } else {
+      // 上次和本次的进行diff更新
+      vm.$el = patch(prevVnode, vnode)
+    }
   }
   Vue.prototype._c = function () {
     return createElementVNode(this, ...arguments)

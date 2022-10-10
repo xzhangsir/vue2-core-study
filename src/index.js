@@ -17,7 +17,7 @@ Vue.prototype.$nextTick = nextTick
 export default Vue
 
 // ----diff-----为了方便观察前后的虚拟节点 测试代码------
-window.onload = function () {
+/* window.onload = function () {
   let render1 = compileToFunction(`
   <ul style = "color:green">
     <li key="e">e</li>
@@ -45,3 +45,4 @@ window.onload = function () {
     patch(prevVnode, nextVnode)
   }, 3000)
 }
+ */
