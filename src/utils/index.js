@@ -30,7 +30,21 @@ function mergeHook(parentVal, childVal) {
     return parentVal
   }
 }
-
+// 组件 指令 过滤器的合并策略
+function mergeAssets(parentVal, childVal) {
+  //比如有同名的全局组件和自己定义的局部组件 那么parentVal代表全局组件 自己定义的组件是childVal  首先会查找自已局部组件有就用自己的  没有就从原型继承全局组件  res.__proto__===parentVal
+  const res = Object.create(parentVal)
+  if (childVal) {
+    for (let k in childVal) {
+      res[k] = childVal[k]
+    }
+  }
+  return res
+}
+// 定义组件的合并策略
+ASSETS_TYPE.forEach((type) => {
+  strats[type + 's'] = mergeAssets
+})
 export function mergeOptions(parent, child) {
   // console.log(parent, child)
   const options = {}
