@@ -383,7 +383,7 @@
     }
 
     return options;
-  }
+  } // 判断是不是对象
 
   function initGlobalAPI(Vue) {
     Vue.options = {};
@@ -1117,14 +1117,20 @@
 
       if (!options.render) {
         //先找render 没有render 找template
-        var tempalte = options.tempalte;
+        var template = options.template;
 
-        if (!tempalte && el) {
+        if (!template && el) {
           //没有template 用外部的html
           el = el.outerHTML;
           var render = compileToFunction(el); // console.log('render', render)
 
           options.render = render;
+        }
+
+        if (template) {
+          var _render = compileToFunction(template);
+
+          options.render = _render;
         }
       } // 挂载
 

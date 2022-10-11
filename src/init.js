@@ -25,12 +25,16 @@ export function initMixin(Vue) {
     let options = vm.$options
     if (!options.render) {
       //先找render 没有render 找template
-      let tempalte = options.tempalte
-      if (!tempalte && el) {
+      let template = options.template
+      if (!template && el) {
         //没有template 用外部的html
         el = el.outerHTML
         let render = compileToFunction(el)
         // console.log('render', render)
+        options.render = render
+      }
+      if (template) {
+        let render = compileToFunction(template)
         options.render = render
       }
     }
