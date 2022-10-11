@@ -36,6 +36,7 @@ function mergeAssets(parentVal, childVal) {
   const res = Object.create(parentVal)
   if (childVal) {
     for (let k in childVal) {
+      // /返回的是构造的对象 可以拿到父亲原型上的属性 并且将儿子的都拷贝到自己身上
       res[k] = childVal[k]
     }
   }
@@ -46,7 +47,6 @@ ASSETS_TYPE.forEach((type) => {
   strats[type + 's'] = mergeAssets
 })
 export function mergeOptions(parent, child) {
-  // console.log(parent, child)
   const options = {}
   // 遍历父亲
   for (let k in parent) {
@@ -62,6 +62,7 @@ export function mergeOptions(parent, child) {
   }
 
   function mergeField(k) {
+    // console.log(strats, k)
     if (strats[k]) {
       options[k] = strats[k](parent[k], child[k])
     } else {

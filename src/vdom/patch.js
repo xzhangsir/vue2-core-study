@@ -1,6 +1,10 @@
 import { isSameVnode } from './index'
 
 export function patch(oldVnode, vnode) {
+  if (!oldVnode) {
+    // 组件的创建过程是没有el属性的
+    return createElm(vnode)
+  }
   // console.log('oldVnode', oldVnode)
   // console.log('vnode', vnode)
   // 初次渲染
@@ -161,10 +165,28 @@ function updateChildren(el, oldChildren, newChildren) {
     }
   }
 }
+// 判断是否是组件Vnode
+function createComponent(vnode) {
+  // 初始化组件
+  // 创建组件实例
+  let i = vnode.data
+  // 调用组件data.hook.init方法进行组件初始化过程 最终组件的vnode.componentInstance.$el就是组件渲染好的真实dom
+  if ((i = i.hook) && (i = i.init)) {
+    i(vnode)
+  }
+  // 如果组件实例化完毕有componentInstance属性 那证明是组件
+  if (vnode.componentInstance) {
+    return true
+  }
+}
 
 export function createElm(vnode) {
   let { tag, data, children, text } = vnode
   if (typeof tag === 'string') {
+    if (createComponent(vnode)) {
+      // 如果是组件 返回真实组件渲染的真实dom
+      return vnode.componentInstance.$el
+    }
     // 标签
     vnode.el = document.createElement(tag)
     patchProps(vnode.el, {}, data)

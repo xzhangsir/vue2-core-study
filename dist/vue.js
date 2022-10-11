@@ -365,6 +365,7 @@
 
     if (childVal) {
       for (var k in childVal) {
+        // /返回的是构造的对象 可以拿到父亲原型上的属性 并且将儿子的都拷贝到自己身上
         res[k] = childVal[k];
       }
     }
@@ -377,7 +378,6 @@
     strats[type + 's'] = mergeAssets;
   });
   function mergeOptions(parent, child) {
-    // console.log(parent, child)
     var options = {}; // 遍历父亲
 
     for (var k in parent) {
@@ -394,6 +394,7 @@
     }
 
     function mergeField(k) {
+      // console.log(strats, k)
       if (strats[k]) {
         options[k] = strats[k](parent[k], child[k]);
       } else {
@@ -404,6 +405,24 @@
 
     return options;
   } // 判断是不是对象
+
+  function isObject(data) {
+    if (_typeof(data) !== 'object' || data === null) {
+      return false;
+    }
+
+    return true;
+  } //判断是不是常规html标签
+
+  function isReservedTag(tagName) {
+    // 定义常见标签
+    var str = 'html,body,base,head,link,meta,style,title,' + 'address,article,aside,footer,header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,' + 'div,dd,dl,dt,figcaption,figure,picture,hr,img,li,main,ol,p,pre,ul,' + 'a,b,abbr,bdi,bdo,br,cite,code,data,dfn,em,i,kbd,mark,q,rp,rt,rtc,ruby,' + 's,samp,small,span,strong,sub,sup,time,u,var,wbr,area,audio,map,track,video,' + 'embed,object,param,source,canvas,script,noscript,del,ins,' + 'caption,col,colgroup,table,thead,tbody,td,th,tr,' + 'button,datalist,fieldset,form,input,label,legend,meter,optgroup,option,' + 'output,progress,select,textarea,' + 'details,dialog,menu,menuitem,summary,' + 'content,element,shadow,template,blockquote,iframe,tfoot';
+    var obj = {};
+    str.split(',').forEach(function (tag) {
+      obj[tag] = true;
+    });
+    return obj[tagName];
+  }
 
   function initAssetRegisters(Vue) {
     ASSETS_TYPE.forEach(function (type) {
@@ -843,30 +862,60 @@
 
   function createElementVNode(vm, tag, data) {
     data = data || {};
-    var key = data.key;
-
-    if (key) {
-      delete data.key;
-    }
+    var key = data.key; // if (key) {
+    //   delete data.key
+    // }
 
     for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
       children[_key - 3] = arguments[_key];
     }
 
-    return vnode(vm, tag, key, data, children);
+    if (isReservedTag(tag)) {
+      // 如果是普通标签
+      return vnode(vm, tag, key, data, children);
+    } else {
+      // 否则就是组件
+      var Ctor = vm.$options.components[tag]; //获取组件的构造函数
+
+      return createComponentVNode(vm, tag, data, key, children, Ctor);
+    }
   }
+
+  function createComponentVNode(vm, tag, data, key, children, Ctor) {
+    if (isObject(Ctor)) {
+      //   如果没有被改造成构造函数
+      Ctor = vm.$options._base.extend(Ctor);
+    }
+
+    data.hook = {
+      init: function init(vnode) {
+        //稍后创建真实节点的时候 如果是组件则调用此方法
+        var child = vnode.componentInstance = new Ctor({
+          _isComponent: true
+        }); //实例化组件
+
+        child.$mount(); //因为没有传入el属性  需要手动挂载 为了在组件实例上面增加$el方法可用于生成组件的真实渲染节点
+      }
+    };
+    return vnode(vm, tag, key, data, children, null, {
+      Ctor: Ctor
+    });
+  }
+
   function createTextVNode(vm, text) {
     return vnode(vm, undefined, undefined, undefined, undefined, text);
   }
 
   function vnode(vm, tag, key, data, children, text) {
+    var componentOptions = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : {};
     return {
       vm: vm,
       tag: tag,
       key: key,
       data: data,
       children: children,
-      text: text
+      text: text,
+      componentOptions: componentOptions
     };
   } // 判断两个虚拟节点是不是同一个
 
@@ -876,9 +925,14 @@
   }
 
   function patch(oldVnode, vnode) {
-    // console.log('oldVnode', oldVnode)
+    if (!oldVnode) {
+      // 组件的创建过程是没有el属性的
+      return createElm(vnode);
+    } // console.log('oldVnode', oldVnode)
     // console.log('vnode', vnode)
     // 初次渲染
+
+
     var isRealElement = oldVnode.nodeType; // 判断是不是真实元素
 
     if (isRealElement) {
@@ -1040,6 +1094,22 @@
         el.removeChild(_childEl);
       }
     }
+  } // 判断是否是组件Vnode
+
+
+  function createComponent(vnode) {
+    // 初始化组件
+    // 创建组件实例
+    var i = vnode.data; // 调用组件data.hook.init方法进行组件初始化过程 最终组件的vnode.componentInstance.$el就是组件渲染好的真实dom
+
+    if ((i = i.hook) && (i = i.init)) {
+      i(vnode);
+    } // 如果组件实例化完毕有componentInstance属性 那证明是组件
+
+
+    if (vnode.componentInstance) {
+      return true;
+    }
   }
 
   function createElm(vnode) {
@@ -1049,7 +1119,12 @@
         text = vnode.text;
 
     if (typeof tag === 'string') {
-      // 标签
+      if (createComponent(vnode)) {
+        // 如果是组件 返回真实组件渲染的真实dom
+        return vnode.componentInstance.$el;
+      } // 标签
+
+
       vnode.el = document.createElement(tag);
       patchProps(vnode.el, {}, data);
       children.forEach(function (child) {
