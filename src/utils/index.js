@@ -9,6 +9,8 @@ export const LIFECYCLE_HOOKS = [
   'beforeDestroy',
   'destroyed'
 ]
+// 组件 指令 过滤器
+export const ASSETS_TYPE = ['component', 'directive', 'filter']
 // 策略
 const strats = {}
 // 为生命周期添加合并策略

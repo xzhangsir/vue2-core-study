@@ -335,7 +335,9 @@
   }
 
   // 定义生命周期
-  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed']; // 策略
+  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed']; // 组件 指令 过滤器
+
+  var ASSETS_TYPE = ['component', 'directive', 'filter']; // 策略
 
   var strats = {}; // 为生命周期添加合并策略
 
@@ -385,8 +387,44 @@
     return options;
   } // 判断是不是对象
 
+  function initAssetRegisters(Vue) {
+    ASSETS_TYPE.forEach(function (type) {
+      Vue[type] = function (id, definition) {
+        if (type === 'component' && typeof definition !== 'function') {
+          // 全局组件注册
+          // 子组件可能也有extend方法
+          definition = this.options._base.extend(definition);
+        }
+
+        this.options[type + 's'][id] = definition;
+      };
+    });
+  }
+
+  function initExtend(Vue) {
+    var cid = 0; //组件的唯一标识
+
+    Vue.extend = function (options) {
+      function Sub(options) {
+        this.__init(options);
+      }
+
+      Sub.cid = cid++; // 子类继承父类
+      // 子类的原型指向父类
+
+      Sub.prototype = Object.create(this.prototype); // constructor 指向自己
+
+      Sub.prototype.constructor = Sub; //合并自己的options和父类的options
+
+      Sub.options = mergeOptions(this.options, options);
+      return Sub;
+    };
+  }
+
   function initGlobalAPI(Vue) {
-    Vue.options = {};
+    Vue.options = {
+      _base: Vue
+    };
 
     Vue.mixin = function (mixin) {
       // 将用户的选型和全局的options进行合并
@@ -395,6 +433,14 @@
       this.options = mergeOptions(this.options, mixin);
       return this;
     };
+
+    ASSETS_TYPE.forEach(function (type) {
+      Vue.options[type + 's'] = {};
+    }); // Vue.extend方法定义
+
+    initExtend(Vue); //assets注册方法 包含组件 指令和过滤器
+
+    initAssetRegisters(Vue);
   }
 
   var oldArrayMethods = Array.prototype;

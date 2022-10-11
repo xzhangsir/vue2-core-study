@@ -12,6 +12,18 @@
 <body>
   <div id="app"></div>
   <script>
+    // 组件的三大特性
+    //  自定义标签 组件里面有自己的属性和事件 组件的插槽
+    // Vue.extend  创建组件的构造函数
+    // Vue.component  创建组件
+
+    // 全局组件
+    Vue.component("parent1-component", Vue.extend({
+        template: `<div>我是全局组件</div>`,
+    }))
+    Vue.component("parent2-component", {
+        template: `<div>俺也是全局组件</div>`,
+    })
     let vm = new Vue({
       el:"#app",
       data(){
@@ -21,7 +33,7 @@
       },
       template: `<div id="a">
       hello 这是我自己的{{name}}
-      <parent-component><parent-component>
+      <parent1-component><parent1-component>
       <child-component></child-component>
       </div>`,
     })
