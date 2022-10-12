@@ -4,6 +4,7 @@ import { initMixin } from './init'
 import { initLifecycle } from './lifecycle'
 import { nextTick } from './utils/next-tick'
 import { createElm, patch } from './vdom/patch'
+import { initWatch } from './watch'
 
 function Vue(options) {
   this.__init(options)
@@ -12,7 +13,7 @@ function Vue(options) {
 initMixin(Vue)
 initLifecycle(Vue)
 initGlobalAPI(Vue) //mixin
-
+initWatch(Vue) //watch
 Vue.prototype.$nextTick = nextTick
 export default Vue
 

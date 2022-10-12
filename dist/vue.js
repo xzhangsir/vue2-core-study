@@ -4,6 +4,32 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      enumerableOnly && (symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      })), keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = null != arguments[i] ? arguments[i] : {};
+      i % 2 ? ownKeys(Object(source), !0).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
+
+    return target;
+  }
+
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -37,6 +63,21 @@
       writable: false
     });
     return Constructor;
+  }
+
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+
+    return obj;
   }
 
   function _slicedToArray(arr, i) {
@@ -674,6 +715,10 @@
     if (options.data) {
       initData(vm);
     }
+
+    if (options.watch) {
+      initWatch$1(vm);
+    }
   }
 
   function initData(vm) {
@@ -696,6 +741,44 @@
 
 
     observer$1(data);
+  }
+
+  function initWatch$1(vm) {
+    var watch = vm.$options.watch; // console.log('watch', watch)
+
+    var _loop = function _loop(k) {
+      //用户自定义watch的写法可能是数组 对象 函数 字符串
+      var handler = watch[k];
+
+      if (Array.isArray(handler)) {
+        // 如果是数组就遍历进行创建
+        handler.forEach(function (handle) {
+          createWatcher(vm, k, handle);
+        });
+      } else {
+        createWatcher(vm, k, handler);
+      }
+    };
+
+    for (var k in watch) {
+      _loop(k);
+    }
+  }
+
+  function createWatcher(vm, exprOrFn, handler) {
+    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+
+    if (isObject(handler)) {
+      options = handler; //保存用户传入的对象
+
+      handler = handler.handler; //这个代表真正用户传入的函数
+    }
+
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+
+    return vm.$watch(exprOrFn, handler, options);
   }
 
   function proxy(vm, source, key) {
@@ -810,12 +893,26 @@
 
       this.depsId = new Set(); //保证deps中的dep是唯一的
 
+      this.user = options.user; //watch用到：标识是不是用户自己的watcher
+
       if (typeof exprOrFn === 'function') {
         this.getter = exprOrFn;
+      } else if (typeof exprOrFn === 'string') {
+        //用户watcher传过来的可能是一个字符串   类似a.a.a.a.b
+        this.getter = function () {
+          var path = exprOrFn.split('.');
+          var obj = vm;
+
+          for (var i = 0; i < path.length; i++) {
+            obj = obj[path[i]];
+          }
+
+          return obj;
+        };
       } // 实例化就会默认调用get方法
 
 
-      this.get();
+      this.value = this.get();
     }
 
     _createClass(Wathcer, [{
@@ -824,9 +921,10 @@
         // 在调用方法之前先把当前watcher实例推到全局Dep.target上
         pushTarget(this); //如果watcher是渲染watcher 那么就相当于执行  vm._update(vm._render()) 这个方法在render函数执行的时候会取值 从而实现依赖收集
 
-        this.getter(); // 在调用方法之后把当前watcher实例从全局Dep.target移除
+        var res = this.getter(); // 在调用方法之后把当前watcher实例从全局Dep.target移除
 
         popTarget();
+        return res;
       }
     }, {
       key: "addDep",
@@ -851,9 +949,25 @@
     }, {
       key: "run",
       value: function run() {
-        // 真正的触发更新
-        console.log('我真正的更新了');
-        this.get();
+        // this.get()
+        var oldVal = this.value; //老值
+
+        var newVal = this.get(); //新值
+
+        this.value = newVal; //现在的新值将成为下一次变化的老值
+        // console.log(oldVal, newVal)
+
+        if (this.user) {
+          // 如果两次的值不相同  或者值是引用类型 因为引用类型新老值是相等的 他们是指向同一引用地址
+          if (newVal !== oldVal || isObject(newVal)) {
+            this.cb.call(this.vm, newVal, oldVal);
+          }
+        } else {
+          // 真正的触发更新
+          console.log('我真正的更新了'); // this.cb.call(this.vm)
+
+          this.get();
+        }
       }
     }]);
 
@@ -951,8 +1065,8 @@
       // 2 两个节点是同一个节点 (判断节点的tag和节点的key)
       // 比较两个节点的属性是否有差异 (复用老的节点 将差异的属性更新)
       // 3 节点比较完  开始比较儿子
-      console.log('oldVnode', oldVnode);
-      console.log('newvnode', vnode);
+      // console.log('oldVnode', oldVnode)
+      // console.log('newvnode', vnode)
       patchVnode(oldVnode, vnode);
     }
   }
@@ -1002,7 +1116,7 @@
 
 
   function updateChildren(el, oldChildren, newChildren) {
-    console.log(el, oldChildren, newChildren);
+    // console.log(el, oldChildren, newChildren)
     var oldStartIndex = 0;
     var newStartIndex = 0;
     var oldEndIndex = oldChildren.length - 1;
@@ -1278,6 +1392,22 @@
     };
   }
 
+  function initWatch(Vue) {
+    Vue.prototype.$watch = function (exprOrFn, cb, options) {
+      // console.log("exprOrFn",exprOrFn)
+      console.log('cb', cb);
+      var vm = this; //  user: true 这里表示是一个用户watcher
+
+      new Wathcer(vm, exprOrFn, cb, _objectSpread2(_objectSpread2({}, options), {}, {
+        user: true
+      })); // 如果有immediate属性 代表需要立即执行回调
+
+      if (options && options.immediate) {
+        cb(); //如果立刻执行
+      }
+    };
+  }
+
   function Vue(options) {
     this.__init(options);
   }
@@ -1285,6 +1415,8 @@
   initMixin(Vue);
   initLifecycle(Vue);
   initGlobalAPI(Vue); //mixin
+
+  initWatch(Vue); //watch
 
   Vue.prototype.$nextTick = nextTick;
 

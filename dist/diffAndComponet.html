@@ -19,7 +19,12 @@
 
     // 全局组件
     Vue.component("parent1-component", Vue.extend({
-        template: `<div>我是全局组件</div>`,
+        template: `<div>我是全局组件{{aa}}</div>`,
+        data(){
+          return{
+            aa:"bbb"
+          }
+        }
     }))
     Vue.component("parent2-component", {
         template: `<div>俺也是全局组件</div>`,

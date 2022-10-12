@@ -26,8 +26,8 @@ export function patch(oldVnode, vnode) {
     // 2 两个节点是同一个节点 (判断节点的tag和节点的key)
     // 比较两个节点的属性是否有差异 (复用老的节点 将差异的属性更新)
     // 3 节点比较完  开始比较儿子
-    console.log('oldVnode', oldVnode)
-    console.log('newvnode', vnode)
+    // console.log('oldVnode', oldVnode)
+    // console.log('newvnode', vnode)
     patchVnode(oldVnode, vnode)
   }
 }
@@ -72,7 +72,7 @@ function patchVnode(oldVNode, vnode) {
 }
 // diff核心 双指针
 function updateChildren(el, oldChildren, newChildren) {
-  console.log(el, oldChildren, newChildren)
+  // console.log(el, oldChildren, newChildren)
   let oldStartIndex = 0
   let newStartIndex = 0
   let oldEndIndex = oldChildren.length - 1
