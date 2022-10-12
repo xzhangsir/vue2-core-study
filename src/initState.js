@@ -1,5 +1,7 @@
 import { observer } from './observe/index'
 import { isObject } from './utils/index'
+import Watcher from './observe/watcher'
+import Dep from './observe/dep'
 
 export function initState(vm) {
   let options = vm.$options
@@ -9,6 +11,9 @@ export function initState(vm) {
   }
   if (options.watch) {
     initWatch(vm)
+  }
+  if (options.computed) {
+    initComputed(vm)
   }
 }
 
@@ -52,6 +57,20 @@ function initWatch(vm) {
   }
 }
 
+function initComputed(vm) {
+  const computed = vm.$options.computed
+  // 将计算属性的watcher保存到vm上
+  const watchers = (vm._computedWatchers = {})
+  for (let key in computed) {
+    let userDef = computed[key]
+    let getter = typeof userDef === 'function' ? userDef : userDef.get
+    // 如果直接new Watcher 默认fn就会直接执行 加个lazy
+    // 将计算属性和watcher对应起来
+    watchers[key] = new Watcher(vm, getter, () => {}, { lazy: true })
+    defineComputed(vm, key, userDef)
+  }
+}
+
 function createWatcher(vm, exprOrFn, handler, options = {}) {
   if (isObject(handler)) {
     options = handler //保存用户传入的对象
@@ -61,6 +80,34 @@ function createWatcher(vm, exprOrFn, handler, options = {}) {
     handler = vm[handler]
   }
   return vm.$watch(exprOrFn, handler, options)
+}
+
+function defineComputed(target, key, userDef) {
+  const setter = userDef.set || (() => {})
+  Object.defineProperty(target, key, {
+    enumerable: true,
+    configurable: true,
+    // 判断这个数据是不是脏的
+    get: createComputedGetter(key),
+    set: setter
+  })
+}
+
+function createComputedGetter(key) {
+  return function () {
+    // 获取对应属性的watcher
+    const watcher = this._computedWatchers[key]
+    if (watcher.dirty) {
+      // 如果数据是脏的 就去执行用户传入的函数
+      watcher.evaluate()
+    }
+    if (Dep.target) {
+      //计算属性出栈后 还有渲染watcher
+      // 我应该让计算属性watcher里面的属性 也去收集上层watcher
+      watcher.depend(1)
+    }
+    return watcher.value
+  }
 }
 
 function proxy(vm, source, key) {

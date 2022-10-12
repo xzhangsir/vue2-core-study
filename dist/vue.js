@@ -709,89 +709,6 @@
     });
   }
 
-  function initState(vm) {
-    var options = vm.$options; // console.log(vm)
-
-    if (options.data) {
-      initData(vm);
-    }
-
-    if (options.watch) {
-      initWatch$1(vm);
-    }
-  }
-
-  function initData(vm) {
-    var data = vm.$options.data; // console.log('刚要初始化的data', data)
-
-    if (data !== null && _typeof(data) === 'object') {
-      data = data;
-    } else if (typeof data === 'function') {
-      data = data.call(vm);
-    } else {
-      console.error('data type err');
-      return false;
-    }
-
-    vm._data = data; // console.log('处理后的data', data)
-
-    for (var key in data) {
-      proxy(vm, '_data', key);
-    } // 对data中的数据进行劫持
-
-
-    observer$1(data);
-  }
-
-  function initWatch$1(vm) {
-    var watch = vm.$options.watch; // console.log('watch', watch)
-
-    var _loop = function _loop(k) {
-      //用户自定义watch的写法可能是数组 对象 函数 字符串
-      var handler = watch[k];
-
-      if (Array.isArray(handler)) {
-        // 如果是数组就遍历进行创建
-        handler.forEach(function (handle) {
-          createWatcher(vm, k, handle);
-        });
-      } else {
-        createWatcher(vm, k, handler);
-      }
-    };
-
-    for (var k in watch) {
-      _loop(k);
-    }
-  }
-
-  function createWatcher(vm, exprOrFn, handler) {
-    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-
-    if (isObject(handler)) {
-      options = handler; //保存用户传入的对象
-
-      handler = handler.handler; //这个代表真正用户传入的函数
-    }
-
-    if (typeof handler === 'string') {
-      handler = vm[handler];
-    }
-
-    return vm.$watch(exprOrFn, handler, options);
-  }
-
-  function proxy(vm, source, key) {
-    Object.defineProperty(vm, key, {
-      get: function get() {
-        return vm[source][key];
-      },
-      set: function set(newVal) {
-        vm[source][key] = newVal;
-      }
-    });
-  }
-
   var callbacks = [];
   var pending = false;
 
@@ -895,6 +812,10 @@
 
       this.user = options.user; //watch用到：标识是不是用户自己的watcher
 
+      this.lazy = options.lazy; //标识计算属性watcher
+
+      this.dirty = this.lazy; //dirty可变  表示计算watcher是否需要重新计算 默认值是true
+
       if (typeof exprOrFn === 'function') {
         this.getter = exprOrFn;
       } else if (typeof exprOrFn === 'string') {
@@ -910,9 +831,10 @@
           return obj;
         };
       } // 实例化就会默认调用get方法
+      // 非计算属性实例化就会默认调用get方法 进行取值  保留结果 计算属性实例化的时候不会去调用get
 
 
-      this.value = this.get();
+      this.value = this.lazy ? undefined : this.get();
     }
 
     _createClass(Wathcer, [{
@@ -921,7 +843,7 @@
         // 在调用方法之前先把当前watcher实例推到全局Dep.target上
         pushTarget(this); //如果watcher是渲染watcher 那么就相当于执行  vm._update(vm._render()) 这个方法在render函数执行的时候会取值 从而实现依赖收集
 
-        var res = this.getter(); // 在调用方法之后把当前watcher实例从全局Dep.target移除
+        var res = this.getter.call(this.vm); // 在调用方法之后把当前watcher实例从全局Dep.target移除
 
         popTarget();
         return res;
@@ -933,7 +855,7 @@
 
         if (!this.depsId.has(id)) {
           this.depsId.add(id);
-          this.deps = dep;
+          this.deps.push(dep);
           dep.addWatcher(this);
         }
       } // 更新
@@ -941,10 +863,35 @@
     }, {
       key: "update",
       value: function update() {
-        /*   console.log('我更新了')
-        this.get() */
-        // 异步更新 每次watcher更新的时候 先将它用一个队列缓存起来 之后再一起调用
-        queueWatcher(this);
+        // 计算属性依赖的值发生变化 只需要把dirty置为true  下次访问到了重新计算
+        if (this.lazy) {
+          this.dirty = true;
+        } else {
+          /*
+            console.log('我更新了')
+            this.get() 
+          */
+          // 异步更新 每次watcher更新的时候 先将它用一个队列缓存起来 之后再一起调用
+          queueWatcher(this);
+        }
+      } //   计算属性重新进行计算 并且计算完成把dirty置为false
+
+    }, {
+      key: "evaluate",
+      value: function evaluate() {
+        this.value = this.get();
+        this.dirty = false;
+      }
+    }, {
+      key: "depend",
+      value: function depend() {
+        // 计算属性的watcher存储了依赖项的dep
+        var i = this.deps.length;
+
+        while (i--) {
+          //调用依赖项的dep去收集渲染watcher
+          this.deps[i].depend();
+        }
       }
     }, {
       key: "run",
@@ -973,6 +920,142 @@
 
     return Wathcer;
   }();
+
+  function initState(vm) {
+    var options = vm.$options; // console.log(vm)
+
+    if (options.data) {
+      initData(vm);
+    }
+
+    if (options.watch) {
+      initWatch$1(vm);
+    }
+
+    if (options.computed) {
+      initComputed(vm);
+    }
+  }
+
+  function initData(vm) {
+    var data = vm.$options.data; // console.log('刚要初始化的data', data)
+
+    if (data !== null && _typeof(data) === 'object') {
+      data = data;
+    } else if (typeof data === 'function') {
+      data = data.call(vm);
+    } else {
+      console.error('data type err');
+      return false;
+    }
+
+    vm._data = data; // console.log('处理后的data', data)
+
+    for (var key in data) {
+      proxy(vm, '_data', key);
+    } // 对data中的数据进行劫持
+
+
+    observer$1(data);
+  }
+
+  function initWatch$1(vm) {
+    var watch = vm.$options.watch; // console.log('watch', watch)
+
+    var _loop = function _loop(k) {
+      //用户自定义watch的写法可能是数组 对象 函数 字符串
+      var handler = watch[k];
+
+      if (Array.isArray(handler)) {
+        // 如果是数组就遍历进行创建
+        handler.forEach(function (handle) {
+          createWatcher(vm, k, handle);
+        });
+      } else {
+        createWatcher(vm, k, handler);
+      }
+    };
+
+    for (var k in watch) {
+      _loop(k);
+    }
+  }
+
+  function initComputed(vm) {
+    var computed = vm.$options.computed; // 将计算属性的watcher保存到vm上
+
+    var watchers = vm._computedWatchers = {};
+
+    for (var key in computed) {
+      var userDef = computed[key];
+      var getter = typeof userDef === 'function' ? userDef : userDef.get; // 如果直接new Watcher 默认fn就会直接执行 加个lazy
+      // 将计算属性和watcher对应起来
+
+      watchers[key] = new Wathcer(vm, getter, function () {}, {
+        lazy: true
+      });
+      defineComputed(vm, key, userDef);
+    }
+  }
+
+  function createWatcher(vm, exprOrFn, handler) {
+    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+
+    if (isObject(handler)) {
+      options = handler; //保存用户传入的对象
+
+      handler = handler.handler; //这个代表真正用户传入的函数
+    }
+
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+
+    return vm.$watch(exprOrFn, handler, options);
+  }
+
+  function defineComputed(target, key, userDef) {
+    var setter = userDef.set || function () {};
+
+    Object.defineProperty(target, key, {
+      enumerable: true,
+      configurable: true,
+      // 判断这个数据是不是脏的
+      get: createComputedGetter(key),
+      set: setter
+    });
+  }
+
+  function createComputedGetter(key) {
+    return function () {
+      // 获取对应属性的watcher
+      var watcher = this._computedWatchers[key];
+
+      if (watcher.dirty) {
+        // 如果数据是脏的 就去执行用户传入的函数
+        watcher.evaluate();
+      }
+
+      if (Dep.target) {
+        //计算属性出栈后 还有渲染watcher
+        // 我应该让计算属性watcher里面的属性 也去收集上层watcher
+        watcher.depend(1);
+      }
+
+      return watcher.value;
+    };
+  }
+
+  function proxy(vm, source, key) {
+    Object.defineProperty(vm, key, {
+      get: function get() {
+        return vm[source][key];
+      },
+      set: function set(newVal) {
+        vm[source][key] = newVal;
+      }
+    });
+  }
 
   function createElementVNode(vm, tag, data) {
     data = data || {};
@@ -1395,7 +1478,7 @@
   function initWatch(Vue) {
     Vue.prototype.$watch = function (exprOrFn, cb, options) {
       // console.log("exprOrFn",exprOrFn)
-      console.log('cb', cb);
+      // console.log('cb', cb)
       var vm = this; //  user: true 这里表示是一个用户watcher
 
       new Wathcer(vm, exprOrFn, cb, _objectSpread2(_objectSpread2({}, options), {}, {

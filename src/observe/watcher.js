@@ -14,6 +14,8 @@ class Wathcer {
     this.deps = [] //存放dep的容器
     this.depsId = new Set() //保证deps中的dep是唯一的
     this.user = options.user //watch用到：标识是不是用户自己的watcher
+    this.lazy = options.lazy //标识计算属性watcher
+    this.dirty = this.lazy //dirty可变  表示计算watcher是否需要重新计算 默认值是true
     if (typeof exprOrFn === 'function') {
       this.getter = exprOrFn
     } else if (typeof exprOrFn === 'string') {
@@ -28,13 +30,14 @@ class Wathcer {
       }
     }
     // 实例化就会默认调用get方法
-    this.value = this.get()
+    // 非计算属性实例化就会默认调用get方法 进行取值  保留结果 计算属性实例化的时候不会去调用get
+    this.value = this.lazy ? undefined : this.get()
   }
   get() {
     // 在调用方法之前先把当前watcher实例推到全局Dep.target上
     pushTarget(this)
     //如果watcher是渲染watcher 那么就相当于执行  vm._update(vm._render()) 这个方法在render函数执行的时候会取值 从而实现依赖收集
-    let res = this.getter()
+    let res = this.getter.call(this.vm)
     // 在调用方法之后把当前watcher实例从全局Dep.target移除
     popTarget()
     return res
@@ -43,16 +46,36 @@ class Wathcer {
     let id = dep.id
     if (!this.depsId.has(id)) {
       this.depsId.add(id)
-      this.deps = dep
+      this.deps.push(dep)
       dep.addWatcher(this)
     }
   }
   // 更新
   update() {
-    /*   console.log('我更新了')
-    this.get() */
-    // 异步更新 每次watcher更新的时候 先将它用一个队列缓存起来 之后再一起调用
-    queueWatcher(this)
+    // 计算属性依赖的值发生变化 只需要把dirty置为true  下次访问到了重新计算
+    if (this.lazy) {
+      this.dirty = true
+    } else {
+      /*
+        console.log('我更新了')
+        this.get() 
+      */
+      // 异步更新 每次watcher更新的时候 先将它用一个队列缓存起来 之后再一起调用
+      queueWatcher(this)
+    }
+  }
+  //   计算属性重新进行计算 并且计算完成把dirty置为false
+  evaluate() {
+    this.value = this.get()
+    this.dirty = false
+  }
+  depend() {
+    // 计算属性的watcher存储了依赖项的dep
+    let i = this.deps.length
+    while (i--) {
+      //调用依赖项的dep去收集渲染watcher
+      this.deps[i].depend()
+    }
   }
   run() {
     // this.get()
