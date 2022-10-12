@@ -463,6 +463,11 @@
       obj[tag] = true;
     });
     return obj[tagName];
+  } // 是否是合格的数组索引
+
+  function isValidArrayIndex(val) {
+    var n = parseFloat(String(val));
+    return n >= 0 && Math.floor(n) === n && isFinite(val);
   }
 
   function initAssetRegisters(Vue) {
@@ -631,7 +636,9 @@
       Object.defineProperty(value, '__ob__', {
         enumerable: false,
         //不可枚举
-        value: this
+        value: this,
+        writable: true,
+        configurable: true
       });
 
       if (Array.isArray(value)) {
@@ -682,6 +689,8 @@
 
     var dep = new Dep();
     Object.defineProperty(data, key, {
+      enumerable: true,
+      configurable: true,
       get: function get() {
         // console.log('获取key', key, value)
         if (Dep.target) {
@@ -707,6 +716,32 @@
         dep.notify(); //通知渲染watcher去更新--派发更新
       }
     });
+  }
+
+  function set(target, key, val) {
+    // 如果是数组 直接调用我们重写的splice方法 可以刷新视图
+    if (Array.isArray(target) && isValidArrayIndex(key)) {
+      target.length = Math.max(target.length, key);
+      target.splice(key, 1, val);
+      return val;
+    } // 如果是对象本身的属性 则直接添加
+
+
+    if (key in target && !(key in Object.prototype)) {
+      target[key] = val;
+      return val;
+    }
+
+    var ob = target.__ob__; // 如果对象本身就不是响应式 不需要将其定义成响应式属性
+
+    if (!ob) {
+      target[key] = val;
+      return val;
+    }
+
+    defineReactive(target, key, val);
+    ob.dep.notify();
+    return val;
   }
 
   var callbacks = [];
@@ -1502,6 +1537,7 @@
   initWatch(Vue); //watch
 
   Vue.prototype.$nextTick = nextTick;
+  Vue.$set = set;
 
   /* window.onload = function () {
     let render1 = compileToFunction(`

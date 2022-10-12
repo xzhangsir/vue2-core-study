@@ -2,6 +2,7 @@ import { compileToFunction } from './compile/index'
 import { initGlobalAPI } from './global-api/index'
 import { initMixin } from './init'
 import { initLifecycle } from './lifecycle'
+import { set } from './observe/index'
 import { nextTick } from './utils/next-tick'
 import { createElm, patch } from './vdom/patch'
 import { initWatch } from './watch'
@@ -15,6 +16,7 @@ initLifecycle(Vue)
 initGlobalAPI(Vue) //mixin
 initWatch(Vue) //watch
 Vue.prototype.$nextTick = nextTick
+Vue.$set = set
 export default Vue
 
 // ----diff-----为了方便观察前后的虚拟节点 测试代码------

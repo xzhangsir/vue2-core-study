@@ -1,3 +1,4 @@
+import { isValidArrayIndex } from '../utils/index'
 import { ArrayMethods } from './array'
 import Dep from './dep'
 
@@ -16,7 +17,9 @@ class Observer {
     // 给 value 添加一个属性
     Object.defineProperty(value, '__ob__', {
       enumerable: false, //不可枚举
-      value: this
+      value: this,
+      writable: true,
+      configurable: true
     })
     if (Array.isArray(value)) {
       // 重写数组 的部分方法
@@ -56,6 +59,8 @@ function defineReactive(data, key, value) {
   // 为每个属性实例化一个Dep 每个属性都有一个dep与之对应
   let dep = new Dep()
   Object.defineProperty(data, key, {
+    enumerable: true,
+    configurable: true,
     get() {
       // console.log('获取key', key, value)
       if (Dep.target) {
@@ -78,4 +83,27 @@ function defineReactive(data, key, value) {
       dep.notify() //通知渲染watcher去更新--派发更新
     }
   })
+}
+
+export function set(target, key, val) {
+  // 如果是数组 直接调用我们重写的splice方法 可以刷新视图
+  if (Array.isArray(target) && isValidArrayIndex(key)) {
+    target.length = Math.max(target.length, key)
+    target.splice(key, 1, val)
+    return val
+  }
+  // 如果是对象本身的属性 则直接添加
+  if (key in target && !(key in Object.prototype)) {
+    target[key] = val
+    return val
+  }
+  const ob = target.__ob__
+  // 如果对象本身就不是响应式 不需要将其定义成响应式属性
+  if (!ob) {
+    target[key] = val
+    return val
+  }
+  defineReactive(target, key, val)
+  ob.dep.notify()
+  return val
 }
