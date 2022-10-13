@@ -7,6 +7,8 @@ import { nextTick } from './utils/next-tick'
 import { createElm, patch } from './vdom/patch'
 import { initWatch } from './watch'
 
+import Vuex from './vuex/index'
+
 function Vue(options) {
   this.__init(options)
 }
@@ -18,6 +20,10 @@ initWatch(Vue) //watch
 Vue.prototype.$nextTick = nextTick
 Vue.$set = set
 export default Vue
+
+Vue.use(Vuex)
+
+Vue._Vuex = Vuex
 
 // ----diff-----为了方便观察前后的虚拟节点 测试代码------
 /* window.onload = function () {

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./vue.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    {{$store.state.name}}
+    <button id = "button">点我</button>
+  </div>
+  <script>
+
+    let vm = new Vue({
+      el: "#app",
+      store: new Vue._Vuex.Store({
+        state: {
+          name:"zx"
+        },
+        getters:{},
+        actions:{},
+        mutations:{},
+      }),
+      data() {
+        return {
+          
+        }
+      },
+    })
+
+    button.addEventListener("click",function(){
+      console.log(vm)
+      vm.$store.state.name = "xm"
+    })
+
+
+
+
+
+
+  </script>
+</body>
+
+</html>

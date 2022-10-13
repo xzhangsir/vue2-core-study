@@ -1565,6 +1565,57 @@
     };
   }
 
+  var Vue$1;
+  var Store = /*#__PURE__*/function () {
+    function Store(options) {
+      _classCallCheck(this, Store);
+
+      console.log(options); // this.state = options.state
+
+      this._vm = new Vue$1({
+        data: {
+          state: options.state
+        }
+      });
+    }
+
+    _createClass(Store, [{
+      key: "state",
+      get: function get() {
+        return this._vm.state;
+      }
+    }]);
+
+    return Store;
+  }(); // 实现store放到每一个使用的组件中
+
+  function install(_Vue) {
+    // Vue 已经存在并且相等，说明已经Vuex.use过
+    if (Vue$1 && Vue$1._Vue === Vue$1) {
+      return false;
+    }
+
+    Vue$1 = _Vue;
+    Vue$1.mixin({
+      beforeCreate: function beforeCreate() {
+        var options = this.$options;
+
+        if (options.store) {
+          // 根实例
+          this.$store = options.store;
+        } else {
+          // 其他
+          this.$store = this.$parent && this.$parent.$store;
+        }
+      }
+    });
+  }
+
+  var Vuex = {
+    Store: Store,
+    install: install
+  };
+
   function Vue(options) {
     this.__init(options);
   }
@@ -1577,6 +1628,8 @@
 
   Vue.prototype.$nextTick = nextTick;
   Vue.$set = set;
+  Vue.use(Vuex);
+  Vue._Vuex = Vuex; // ----diff-----为了方便观察前后的虚拟节点 测试代码------
 
   /* window.onload = function () {
     let render1 = compileToFunction(`
