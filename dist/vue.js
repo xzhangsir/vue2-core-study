@@ -468,6 +468,18 @@
   function isValidArrayIndex(val) {
     var n = parseFloat(String(val));
     return n >= 0 && Math.floor(n) === n && isFinite(val);
+  } // 伪数组转真数组
+
+  function toArray(list, start) {
+    start = start || 0;
+    var i = list.length - start;
+    var res = new Array(i);
+
+    while (i--) {
+      res[i] = list[i + start];
+    }
+
+    return res;
   }
 
   function initAssetRegisters(Vue) {
@@ -504,6 +516,32 @@
     };
   }
 
+  function initUse(Vue) {
+    Vue.use = function (plugin) {
+      var installedPlugins = this._installedPlugins || (this._installedPlugins = []);
+
+      if (installedPlugins.indexOf(plugin) > -1) {
+        // 如果这个插件安装过 就直接返回
+        return this;
+      } // 伪数组转真数组
+
+
+      var args = toArray(arguments, 1);
+      args.unshift(this); //在参数中添加vue的构造函数
+      // 把自身 Vue 传到插件的 install 方法 这样可以避免第三方插件强依赖 Vue
+
+      if (typeof plugin.install === 'function') {
+        plugin.install.apply(plugin, args); //执行install方法
+      } else if (typeof plugin === 'function') {
+        plugin.apply(null, args); //没有install方法直接把传入的插件执行
+      } // 记录安装的插件
+
+
+      installedPlugins.push(plugin);
+      return this;
+    };
+  }
+
   function initGlobalAPI(Vue) {
     Vue.options = {
       _base: Vue
@@ -524,6 +562,7 @@
     initExtend(Vue); //assets注册方法 包含组件 指令和过滤器
 
     initAssetRegisters(Vue);
+    initUse(Vue); //vue.use
   }
 
   var oldArrayMethods = Array.prototype;

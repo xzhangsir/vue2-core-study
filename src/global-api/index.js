@@ -1,6 +1,7 @@
 import { ASSETS_TYPE, mergeOptions } from '../utils/index'
 import { initAssetRegisters } from './asset'
 import { initExtend } from './initExtend'
+import { initUse } from '../global-api/use'
 
 export function initGlobalAPI(Vue) {
   Vue.options = {
@@ -20,4 +21,5 @@ export function initGlobalAPI(Vue) {
   initExtend(Vue)
   //assets注册方法 包含组件 指令和过滤器
   initAssetRegisters(Vue)
+  initUse(Vue) //vue.use
 }

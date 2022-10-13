@@ -108,3 +108,14 @@ export function isValidArrayIndex(val) {
   const n = parseFloat(String(val))
   return n >= 0 && Math.floor(n) === n && isFinite(val)
 }
+
+// 伪数组转真数组
+export function toArray(list, start) {
+  start = start || 0
+  let i = list.length - start
+  const res = new Array(i)
+  while (i--) {
+    res[i] = list[i + start]
+  }
+  return res
+}
