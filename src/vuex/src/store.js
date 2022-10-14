@@ -1,12 +1,31 @@
+import { foreach } from '../utils/index'
 let Vue
 export class Store {
   constructor(options) {
     console.log(options)
     // this.state = options.state
+
+    let getters = options.getters
+    this.getters = {}
+    let computed = {}
+
+    foreach(getters, (key, val) => {
+      computed[key] = () => {
+        return val.call(this, this.state)
+      }
+      Object.defineProperty(this.getters, key, {
+        get: () => {
+          // return val(this.state)
+          return this._vm[key]
+        }
+      })
+    })
+
     this._vm = new Vue({
       data: {
         state: options.state
-      }
+      },
+      computed
     })
   }
   get state() {

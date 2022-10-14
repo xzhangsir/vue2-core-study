@@ -10,7 +10,7 @@ export function initMixin(Vue) {
     // console.log('vm.constructor.options', vm.constructor.options)
     // console.log('options', options)
     vm.$options = mergeOptions(vm.constructor.options, options)
-    console.log(vm)
+    // console.log(vm)
     callHook(vm, 'beforeCreate') //初始化数据之前
     initState(vm)
     callHook(vm, 'created') //初始化数据之后

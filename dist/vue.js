@@ -1507,8 +1507,8 @@
       // console.log('vm.constructor.options', vm.constructor.options)
       // console.log('options', options)
 
-      vm.$options = mergeOptions(vm.constructor.options, options);
-      console.log(vm);
+      vm.$options = mergeOptions(vm.constructor.options, options); // console.log(vm)
+
       callHook(vm, 'beforeCreate'); //初始化数据之前
 
       initState(vm);
@@ -1565,17 +1565,41 @@
     };
   }
 
+  function foreach(obj, cb) {
+    Object.keys(obj).forEach(function (key) {
+      cb(key, obj[key]);
+    });
+  }
+
   var Vue$1;
   var Store = /*#__PURE__*/function () {
     function Store(options) {
+      var _this = this;
+
       _classCallCheck(this, Store);
 
       console.log(options); // this.state = options.state
 
+      var getters = options.getters;
+      this.getters = {};
+      var computed = {};
+      foreach(getters, function (key, val) {
+        computed[key] = function () {
+          return val.call(_this, _this.state);
+        };
+
+        Object.defineProperty(_this.getters, key, {
+          get: function get() {
+            // return val(this.state)
+            return _this._vm[key];
+          }
+        });
+      });
       this._vm = new Vue$1({
         data: {
           state: options.state
-        }
+        },
+        computed: computed
       });
     }
 
