@@ -1081,7 +1081,7 @@
     var methods = vm.$options.methods;
 
     for (var key in methods) {
-      vm[key] = methods[key] == null ? function () {} : methods[key].bind(vm);
+      vm[key] = typeof methods[key] !== 'function' ? function () {} : methods[key].bind(vm);
     }
   }
 
@@ -1591,6 +1591,14 @@
 
       _classCallCheck(this, Store);
 
+      _defineProperty(this, "commit", function (type, payload) {
+        _this.mutations[type](payload);
+      });
+
+      _defineProperty(this, "dispatch", function (type, payload) {
+        _this.actions[type](payload);
+      });
+
       console.log(options); // this.state = options.state
 
       var getters = options.getters;
@@ -1614,13 +1622,26 @@
         },
         computed: computed
       });
+      this.mutations = {};
+      this.actions = {};
+      foreach(options.mutations, function (key, val) {
+        _this.mutations[key] = function (payload) {
+          return val.call(_this, _this.state, payload);
+        };
+      });
+      foreach(options.actions, function (key, val) {
+        _this.actions[key] = function (payload) {
+          return val.call(_this, _this, payload);
+        };
+      });
     }
 
     _createClass(Store, [{
       key: "state",
       get: function get() {
         return this._vm.state;
-      }
+      } // 当用户调用this.$store.commit 方法的时候会调用这个方法
+
     }]);
 
     return Store;

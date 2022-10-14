@@ -77,7 +77,8 @@ function initComputed(vm) {
 function initMethods(vm) {
   let methods = vm.$options.methods
   for (let key in methods) {
-    vm[key] = methods[key] == null ? () => {} : methods[key].bind(vm)
+    vm[key] =
+      typeof methods[key] !== 'function' ? () => {} : methods[key].bind(vm)
   }
 }
 

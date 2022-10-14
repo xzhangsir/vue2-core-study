@@ -35,8 +35,18 @@
             return +state.age + 5
           }
         },
-        actions:{},
-        mutations:{},
+        actions:{
+          ajaxName({commit},data){
+            setTimeout(()=>{
+              commit("changeName",data)
+            },2000)
+          }
+        },
+        mutations:{
+          changeName(state,newName){
+            state.name = newName
+          }
+        },
       }),
       data() {
         return {
@@ -51,7 +61,11 @@
       }
     })
 
-    button.addEventListener("click",vm.changeName)
+    // button.addEventListener("click",vm.changeName)
+    button.addEventListener("click",()=>{
+      // vm.$store.commit("changeName",'xin')
+      vm.$store.dispatch("ajaxName",123)
+    })
 
 
 
