@@ -5,7 +5,7 @@ import Dep from './observe/dep'
 
 export function initState(vm) {
   let options = vm.$options
-  // console.log(vm)
+  console.log(vm)
   if (options.data) {
     initData(vm)
   }
@@ -14,6 +14,9 @@ export function initState(vm) {
   }
   if (options.computed) {
     initComputed(vm)
+  }
+  if (options.methods) {
+    initMethods(vm)
   }
 }
 
@@ -68,6 +71,13 @@ function initComputed(vm) {
     // 将计算属性和watcher对应起来
     watchers[key] = new Watcher(vm, getter, () => {}, { lazy: true })
     defineComputed(vm, key, userDef)
+  }
+}
+
+function initMethods(vm) {
+  let methods = vm.$options.methods
+  for (let key in methods) {
+    vm[key] = methods[key] == null ? () => {} : methods[key].bind(vm)
   }
 }
 

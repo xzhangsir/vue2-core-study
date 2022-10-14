@@ -996,7 +996,8 @@
   }();
 
   function initState(vm) {
-    var options = vm.$options; // console.log(vm)
+    var options = vm.$options;
+    console.log(vm);
 
     if (options.data) {
       initData(vm);
@@ -1008,6 +1009,10 @@
 
     if (options.computed) {
       initComputed(vm);
+    }
+
+    if (options.methods) {
+      initMethods(vm);
     }
   }
 
@@ -1069,6 +1074,14 @@
         lazy: true
       });
       defineComputed(vm, key, userDef);
+    }
+  }
+
+  function initMethods(vm) {
+    var methods = vm.$options.methods;
+
+    for (var key in methods) {
+      vm[key] = methods[key] == null ? function () {} : methods[key].bind(vm);
     }
   }
 
