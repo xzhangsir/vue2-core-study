@@ -1584,6 +1584,184 @@
     });
   }
 
+  /**
+   * Module 模块类，提供模块数据结构与相关能力扩展
+   */
+  var Module = /*#__PURE__*/function () {
+    function Module(newModule) {
+      _classCallCheck(this, Module);
+
+      this._raw = newModule;
+      this._children = {};
+      this.state = newModule.state;
+    }
+    /**
+     * 根据模块名获取模块实例
+     * @param {*} key 模块名
+     * @returns 模块实例
+     */
+
+
+    _createClass(Module, [{
+      key: "getChild",
+      value: function getChild(key) {
+        return this._children[key];
+      }
+      /**
+       * 向当前模块实例添加子模块
+       * @param {*} key     模块名
+       * @param {*} module  子模块实例
+       */
+
+    }, {
+      key: "addChild",
+      value: function addChild(key, module) {
+        this._children[key] = module;
+      }
+      /**
+       * 遍历当前模块下的 mutations,具体处理由外部回调实现
+       * @param {*} fn 返回当前 mutation 和 key,具体处理逻辑由调用方实现
+       */
+
+    }, {
+      key: "forEachMutation",
+      value: function forEachMutation(fn) {
+        var _this = this;
+
+        if (this._raw.mutations) {
+          Object.keys(this._raw.mutations).forEach(function (key) {
+            return fn(_this._raw.mutations[key], key);
+          });
+        }
+      }
+      /**
+       * 遍历当前模块下的 actions,具体处理由外部回调实现
+       * @param {*} fn 返回当前 action 和 key,具体处理逻辑由调用方实现
+       */
+
+    }, {
+      key: "forEachAction",
+      value: function forEachAction(fn) {
+        var _this2 = this;
+
+        if (this._raw.actions) {
+          Object.keys(this._raw.actions).forEach(function (key) {
+            return fn(_this2._raw.actions[key], key);
+          });
+        }
+      }
+      /**
+       * 遍历当前模块下的 getters,具体处理由外部回调实现
+       * @param {*} fn 返回当前 getter 和 key,具体处理逻辑由调用方实现
+       */
+
+    }, {
+      key: "forEachGetter",
+      value: function forEachGetter(fn) {
+        var _this3 = this;
+
+        if (this._raw.getters) {
+          Object.keys(this._raw.getters).forEach(function (key) {
+            return fn(_this3._raw.getters[key], key);
+          });
+        }
+      }
+      /**
+       * 遍历当前模块的子模块,具体处理由外部回调实现
+       * @param {*} fn 返回当前子模块 和 key,具体处理逻辑由调用方实现
+       */
+
+    }, {
+      key: "forEachChild",
+      value: function forEachChild(fn) {
+        var _this4 = this;
+
+        Object.keys(this._children).forEach(function (key) {
+          return fn(_this4._children[key], key);
+        });
+      }
+    }]);
+
+    return Module;
+  }();
+
+  /**
+   * 模块收集操作
+   *  处理用户传入的 options 选项
+   *  将子模块注册到对应的父模块上
+   */
+
+  var ModuleCollection = /*#__PURE__*/function () {
+    function ModuleCollection(options) {
+      _classCallCheck(this, ModuleCollection);
+
+      // 从根模块开始，将子模块注册到父模块中
+      // 参数1数组:栈结构，用于存储路径，标识模块树的层级关系
+      this.register([], options);
+    }
+    /**
+     * 将子模块注册到父模块中
+     * @param {*} path       数组类型,当前待注册模块的完整路径
+     * @param {*} rootModule 当前待注册模块对象
+     */
+
+
+    _createClass(ModuleCollection, [{
+      key: "register",
+      value: function register(path, rootModule) {
+        var _this = this;
+
+        // 格式化，并将当前模块,注册到对应的父模块上
+        // 格式化:构建 Module 对象
+        // let newModule = {
+        //   _raw: rootModule, // 当前模块的完整对象
+        //   _children: {}, // 当前模块的子模块
+        //   state: rootModule.state // 当前模块的状态
+        // }
+        var newModule = new Module(rootModule); // 根模块时:创建模块树的根对象
+
+        if (path.length == 0) {
+          this.root = newModule;
+        } else {
+          // 非根模块时:将当前模块,注册到对应父模块上
+          // 逐层找到当前模块的父亲（例如:path = [a,b,c,d]）
+          var parent = path.slice(0, -1).reduce(function (memo, current) {
+            //从根模块中找到a模块;从a模块中找到b模块;从b模块中找到c模块;结束返回c模块即为d模块的父亲
+            return memo._children[current];
+          }, this.root); // 将d模块注册到c模块上
+
+          parent._children[path[path.length - 1]] = newModule;
+        }
+
+        if (rootModule.modules) {
+          Object.keys(rootModule.modules).forEach(function (moduleName) {
+            var module = rootModule.modules[moduleName]; // 将子模块注册到对应的父模块上
+            // 1,path:待注册子模块的完整路径,当前父模块path拼接子模块名moduleName
+            // 2,module:当前待注册子模块对象
+
+            _this.register(path.concat(moduleName), module);
+          });
+        }
+      }
+    }, {
+      key: "getNamespaced",
+      value: function getNamespaced(path) {
+        console.log(path);
+        var root = this.root; // 从根模块开始，逐层处理子模块，拼接命名空间标识
+
+        return path.reduce(function (str, key) {
+          console.log(root, key); // 从根模块查找当前子模块
+
+          root = root.getChild(key); // 若子模块启用命名空间，拼接命名空间标识并返回结果继续处理
+
+          return str + (root._raw.namespaced ? key + '/' : '');
+        }, '');
+      }
+    }]);
+
+    return ModuleCollection;
+  }();
+
   var Vue$1;
   var Store = /*#__PURE__*/function () {
     function Store(options) {
@@ -1592,48 +1770,30 @@
       _classCallCheck(this, Store);
 
       _defineProperty(this, "commit", function (type, payload) {
-        _this.mutations[type](payload);
+        // this.mutations[type](payload)
+        _this._mutations[type].forEach(function (mutation) {
+          return mutation.call(_this, payload);
+        });
       });
 
       _defineProperty(this, "dispatch", function (type, payload) {
-        _this.actions[type](payload);
-      });
-
-      console.log(options); // this.state = options.state
-
-      var getters = options.getters;
-      this.getters = {};
-      var computed = {};
-      foreach(getters, function (key, val) {
-        computed[key] = function () {
-          return val.call(_this, _this.state);
-        };
-
-        Object.defineProperty(_this.getters, key, {
-          get: function get() {
-            // return val(this.state)
-            return _this._vm[key];
-          }
+        // this.actions[type](payload)
+        _this._actions[type].forEach(function (action) {
+          return action.call(_this, payload);
         });
       });
-      this._vm = new Vue$1({
-        data: {
-          state: options.state
-        },
-        computed: computed
-      });
-      this.mutations = {};
-      this.actions = {};
-      foreach(options.mutations, function (key, val) {
-        _this.mutations[key] = function (payload) {
-          return val.call(_this, _this.state, payload);
-        };
-      });
-      foreach(options.actions, function (key, val) {
-        _this.actions[key] = function (payload) {
-          return val.call(_this, _this, payload);
-        };
-      });
+
+      options.getters;
+          var state = options.state;
+      this._actions = {};
+      this._mutations = {};
+      this._getters = {}; // 1,模块收集：options 格式化 -> Vuex 模块树
+
+      this._modules = new ModuleCollection(options); // 2,模块安装
+
+      installModule(this, state, [], this._modules.root); // 3,将 state 状态、getters 定义在当前的 vm 实例上
+
+      resetStoreVM(this, state);
     }
 
     _createClass(Store, [{
@@ -1645,7 +1805,103 @@
     }]);
 
     return Store;
-  }(); // 实现store放到每一个使用的组件中
+  }();
+  /**
+   * 重置 Store 容器对象的 vm 实例
+   * @param {*} store store实例，包含 _wrappedGetters 即全部的 getter 方法；
+   * @param {*} state 根状态，在状态安装完成后包含全部模块状态；
+   */
+
+  function resetStoreVM(store, state) {
+    var computed = {}; // 定义 computed 计算属性
+
+    store.getters = {}; // 定义 store 容器实例中的 getters
+    // 遍历 _wrappedGetters 构建 computed 对象并进行数据代理
+
+    foreach(store._getters, function (fn, key) {
+      // 构建 computed 对象，后面借助 Vue 计算属性实现数据缓存
+      computed[key] = function () {
+        return fn();
+      }; // 数据代理：将 getter 的取值代理到 vm 实例上，到计算数据取值
+
+
+      Object.defineProperty(store.getters, key, {
+        get: function get() {
+          return store._vm[key];
+        }
+      });
+    }); // 使用 state 根状态 和 computed 创建 vm 实例，成为响应式数据
+
+    store._vm = new Vue$1({
+      // 借助 data 使根状态 state 成为响应式数据
+      data: function data() {
+        return {
+          state: state
+        };
+      },
+      // 借助 computed 计算属性实现数据缓存
+      computed: computed
+    });
+  }
+  /**
+   * 安装模块
+   * @param {*} store       容器
+   * @param {*} rootState   根状态
+   * @param {*} path        所有路径
+   * @param {*} module      格式化后的模块对象
+   */
+
+
+  var installModule = function installModule(store, rootState, path, module) {
+    // 根据当前模块的 path 路径，拼接当前模块的命名空间标识
+    var namespace = store._modules.getNamespaced(path); // 处理子模块：将子模块上的状态，添加到对应父模块的状态中；
+
+
+    if (path.length > 0) {
+      // 从根状态开始逐层差找，找到当前子模块对应的父模块状态
+      var parent = path.slice(0, -1).reduce(function (memo, current) {
+        return memo[current];
+      }, rootState); // 支持 Vuex 动态添加模块，将新增状态直接定义成为响应式数据；
+
+      Vue$1.$set(parent, path[path.length - 1], module.state);
+    } // 遍历当前模块中的 actions、mutations、getters
+    // 将它们分别定义到 store 中的 _actions、_mutations、_getters;
+    // 遍历 mutation
+
+
+    module.forEachMutation(function (mutation, key) {
+      console.log(mutation, key, namespace); // 处理成为数组类型：每个 key 可能会存在多个需要被处理的函数
+
+      store._mutations[namespace + key] = store._mutations[namespace + key] || []; // 向 _mutations 对应 key 的数组中，放入对应的处理函数
+
+      store._mutations[namespace + key].push(function (payload) {
+        // 执行 mutation，传入当前模块的 state 状态
+        mutation.call(store, module.state, payload);
+      });
+    }); // 遍历 action
+
+    module.forEachAction(function (action, key) {
+      store._actions[namespace + key] = store._actions[namespace + key] || [];
+
+      store._actions[namespace + key].push(function (payload) {
+        action.call(store, store, payload);
+      });
+    }); // 遍历 getter
+
+    module.forEachGetter(function (getter, key) {
+      // 注意：getter 重名将会被覆盖
+      store._getters[namespace + key] = function () {
+        // 执行对应的 getter 方法，传入当前模块的 state 状态，返回执行结果
+        return getter(module.state);
+      };
+    }); // 遍历当前模块的儿子
+
+    module.forEachChild(function (child, key) {
+      // 递归安装/加载子模块
+      installModule(store, rootState, path.concat(key), child);
+    });
+  }; // 实现store放到每一个使用的组件中
+
 
   function install(_Vue) {
     // Vue 已经存在并且相等，说明已经Vuex.use过

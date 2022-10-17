@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./vue.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <div>vuex:{{$store.state.name}}</div>
+    <button id = "button">点我</button>
+    <div>a模块:{{$store.state.a.name}}</div>
+    <div>b模块:{{$store.state.b.name}}</div>
+  </div>
+  <script>
+
+    let vm = new Vue({
+      el: "#app",
+      store: new Vue._Vuex.Store({
+        namespaced: true,
+        state: {
+          name:"zx",
+        },
+        getters:{
+         
+        },
+        actions:{
+          
+        },
+        mutations:{
+         changeName(state, newName) {
+            state.name = newName
+          }
+        },
+        modules:{
+          a:{
+            namespaced: true,
+            state:{
+              name:"a-name"
+            },
+            mutations:{
+              changeName(state,newNamea){
+                state.name = newNamea
+              }
+            }
+          },
+          b: {
+            namespaced:true,
+            state: {
+              name: "b-name"
+            },
+            mutations: {
+              changeName(state, newNameb) {
+                state.name = newNameb
+              }
+            }
+          }
+        }
+      }),
+      data() {
+        return {
+        }
+      },
+
+    })
+
+    button.addEventListener("click",()=>{
+      // vm.$store.commit("changeName",123)
+      vm.$store.commit("a/changeName", 'a-123')
+    })
+
+
+    // 模块树对象
+     /*  {
+        _raw: '根模块',
+          _children: {
+          moduleA: {
+            _raw: "模块A",
+              _children: {
+              moduleC: {
+                _raw: "模块C",
+                  _children: { },
+                state: '模块C的状态'
+              }
+            },
+            state: '模块A的状态'
+          },
+          moduleB: {
+            _raw: "模块B",
+              _children: { },
+            state: '模块B的状态'
+          }
+        },
+        state: '根模块的状态'
+      } */
+
+
+
+
+
+
+  </script>
+</body>
+
+</html>
