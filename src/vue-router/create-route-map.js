@@ -34,3 +34,17 @@ function addRouteRecord(route, pathMap, parent) {
     })
   }
 }
+
+export function createRoute(record, location) {
+  let res = [] //[/about /about/a]
+  if (record) {
+    while (record) {
+      res.unshift(record)
+      record = record.parent
+    }
+  }
+  return {
+    ...location,
+    matched: res
+  }
+}
