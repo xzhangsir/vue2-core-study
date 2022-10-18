@@ -1,5 +1,6 @@
 import Vue from 'vue'
-import VueRouter from 'vue-router'
+// import VueRouter from 'vue-router'
+import VueRouter from '../../../vue-router/index'
 import Home from '../components/Hello.vue'
 import About from '../components/About.vue'
 
@@ -19,7 +20,13 @@ const routes = [
   {
     path: '/about',
     name: 'about',
-    component: About
+    component: About,
+    children: [
+      {
+        path: 'a',
+        component: { render: (h) => <div>a页面</div> }
+      }
+    ]
   }
 ]
 

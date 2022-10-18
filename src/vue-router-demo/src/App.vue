@@ -14,6 +14,9 @@ import About from './components/About.vue'
 
 export default {
   name: 'App',
+  mounted(){
+    console.log(this._routerRoot._router)
+  },
   components: {
     Hello,
     About
