@@ -4,3 +4,5 @@ export default {
   Store,
   install
 }
+
+export * from './src/helpers'

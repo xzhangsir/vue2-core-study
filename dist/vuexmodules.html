@@ -17,6 +17,7 @@
     <div>b模块:{{$store.state.b.name}}</div>
   </div>
   <script>
+    
     function persists() {
         return function (store) {
           console.log("----- persists 插件执行 -----")
@@ -34,6 +35,18 @@
         }
       }
 
+    /* 
+      function mapMutations(mutationsArr) {
+          let obj = {}
+          for (let i = 0; i < mutationsArr.length; i++) {
+            let type = mutationsArr[i]
+            obj[type] = function (data) {
+              this.$store.commit(type, data)
+            }
+          }
+          return obj
+        } */
+
     let vm = new Vue({
       el: "#app",
       store: new Vue._Vuex.Store({
@@ -42,6 +55,9 @@
           name:"zx",
         },
         getters:{
+          max_name(){
+            return name + name
+          }
          
         },
         actions:{
@@ -84,13 +100,17 @@
         return {
         }
       },
+      methods:{
+        ...mapMutations(["changeName"])
+      }
 
     })
     let a = 1
     button.addEventListener("click",()=>{
       // vm.$store.commit("changeName",123)
 
-      vm.$store.commit("a/changeName", a++)
+      // vm.$store.commit("a/changeName", a++)
+      vm.changeName("8899")
     })
 
 
