@@ -1,10 +1,17 @@
 import RouterLink from './components/routerLink.jsx'
 import RouterView from './components/routerView'
-
+import createMatcher from './create-matcher.js'
 let Vue
 
 export default class VueRouter {
-  constructor() {}
+  constructor(options = {}) {
+    // 路由匹配器-处理路由配置：将树形结构的嵌套数组转化为扁平化结构的对象，便于后续的路由匹配\
+    //[{},{}] =>{"/":{组件的相关信息},"/home":{}}
+    // 路由匹配器返回两个核心方法：match、addRoutes
+    this.matcher = createMatcher(options.routes || []) // options.routes 默认[]
+  }
+  // 路由初始化方法，供 install 安装时调用
+  init(app) {}
 }
 
 VueRouter.install = (_vue) => {
@@ -23,6 +30,8 @@ VueRouter.install = (_vue) => {
         // 根组件才有 router
         this._routerRoot = this // 为根组件添加 _routerRoot 属性指向根组件自己
         this._router = this.$options.router // this._router 指向 this.$options.router
+        // 在根组件中，调用路由实例上的 init 方法，完成插件的初始化
+        this._router.init(this) // this 为根实例
       } else {
         // console.log(this.$parent)
         // 子组件
