@@ -17,6 +17,22 @@
     <div>b模块:{{$store.state.b.name}}</div>
   </div>
   <script>
+    function persists() {
+        return function (store) {
+          console.log("----- persists 插件执行 -----")
+          // 取出本地存储的状态
+          let data = localStorage.getItem('VUEX:STATE');
+          if (data) {
+            console.log("----- 存在本地状态，同步至 Vuex -----")
+            // 如果存在，使用本地状态替换 Vuex 中的状态
+            store.replaceState(JSON.parse(data));
+          }
+          store.subscribe((mutation, state) => {
+            console.log("----- 进入Vuex 插件 store.subscribe 处理函数-----")
+            localStorage.setItem('VUEX:STATE', JSON.stringify(state));
+          })
+        }
+      }
 
     let vm = new Vue({
       el: "#app",
@@ -36,6 +52,9 @@
             state.name = newName
           }
         },
+        plugins: [
+          persists()
+        ],
         modules:{
           a:{
             namespaced: true,
@@ -67,10 +86,11 @@
       },
 
     })
-
+    let a = 1
     button.addEventListener("click",()=>{
       // vm.$store.commit("changeName",123)
-      vm.$store.commit("a/changeName", 'a-123')
+
+      vm.$store.commit("a/changeName", a++)
     })
 
 

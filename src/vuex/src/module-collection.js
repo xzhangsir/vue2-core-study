@@ -49,11 +49,11 @@ class ModuleCollection {
     }
   }
   getNamespaced(path) {
-    console.log(path)
+    // console.log(path)
     let root = this.root
     // 从根模块开始，逐层处理子模块，拼接命名空间标识
     return path.reduce((str, key) => {
-      console.log(root, key)
+      // console.log(root, key)
       // 从根模块查找当前子模块
       root = root.getChild(key)
       // 若子模块启用命名空间，拼接命名空间标识并返回结果继续处理

@@ -9,15 +9,33 @@ export class Store {
     this._actions = {}
     this._mutations = {}
     this._getters = {}
+
+    // 收集通过 store.subcribe 订阅状态变更事件的处理函数 fn
+    // 当 mutation 执行时，触发全部订阅事件执行，返回当前 mutation 和更新后的状态
+    this._subscribes = []
+
     // 1,模块收集：options 格式化 -> Vuex 模块树
     this._modules = new ModuleCollection(options)
     // 2,模块安装
     installModule(this, state, [], this._modules.root)
     // 3,将 state 状态、getters 定义在当前的 vm 实例上
     resetStoreVM(this, state)
+    // 依次执行 options 选项中的 plugins 插件,传入当前 store 实例
+    options.plugins.forEach((plugin) => plugin(this))
   }
   get state() {
     return this._vm.state
+  }
+  // 提供 store.subscribe 状态变更事件订阅功能
+  // 将回调函数统计收集到 _subscribes 数组中；
+  subscribe(fn) {
+    console.log('订阅 Vuex 状态变化，收集处理函数')
+    this._subscribes.push(fn)
+    console.log('this._subscribes', this._subscribes)
+  }
+  // Vuex 状态替换
+  replaceState(state) {
+    this._vm._data.state = state
   }
   // 当用户调用this.$store.commit 方法的时候会调用这个方法
   commit = (type, payload) => {
@@ -85,13 +103,21 @@ const installModule = (store, rootState, path, module) => {
 
   // 遍历 mutation
   module.forEachMutation((mutation, key) => {
-    console.log(mutation, key, namespace)
+    // console.log(mutation, key, namespace)
     // 处理成为数组类型：每个 key 可能会存在多个需要被处理的函数
     store._mutations[namespace + key] = store._mutations[namespace + key] || []
     // 向 _mutations 对应 key 的数组中，放入对应的处理函数
     store._mutations[namespace + key].push((payload) => {
       // 执行 mutation，传入当前模块的 state 状态
-      mutation.call(store, module.state, payload)
+      // mutation.call(store, module.state, payload)
+      mutation.call(store, getState(store, path), payload)
+
+      // 当 mutation 执行时，依次执行 store.subscribe 状态变更事件订阅的处理函数 fn
+      store._subscribes.forEach((fn) => {
+        console.log('状态更新，依次执行订阅处理')
+        // fn(mutation, rootState)
+        fn(mutation, store.state)
+      })
     })
   })
   // 遍历 action
@@ -106,7 +132,8 @@ const installModule = (store, rootState, path, module) => {
     // 注意：getter 重名将会被覆盖
     store._getters[namespace + key] = function () {
       // 执行对应的 getter 方法，传入当前模块的 state 状态，返回执行结果
-      return getter(module.state)
+      // return getter(module.state)
+      return getter(getState(store, path))
     }
   })
   // 遍历当前模块的儿子
@@ -114,6 +141,12 @@ const installModule = (store, rootState, path, module) => {
     // 递归安装/加载子模块
     installModule(store, rootState, path.concat(key), child)
   })
+}
+// 通过当前模块路径 path，从最新的根状态上，获取模块的最新状态
+function getState(store, path) {
+  return path.reduce((newState, current) => {
+    return newState[current]
+  }, store.state) // replaceState 后的最新状态
 }
 
 // 实现store放到每一个使用的组件中
