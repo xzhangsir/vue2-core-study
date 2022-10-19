@@ -24,7 +24,16 @@ export default class VueRouter {
     console.log(this)
   }
   // 路由初始化方法，供 install 安装时调用
-  init(app) {}
+  init(app) {
+    // 当前的history实例：可能是HashHistory，也可能是BrowserHistory；
+    const history = this.history
+    // 设置监听器：内部调用的是不同子类中的实现
+    const setUpListener = () => {
+      history.setupListener()
+    }
+    // 初始化时，获取当前hash值进行跳转, 并设置监听器
+    history.transitionTo(history.getCurrentLocation(), setUpListener)
+  }
 }
 
 VueRouter.install = (_vue) => {
