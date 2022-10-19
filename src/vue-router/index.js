@@ -27,6 +27,9 @@ export default class VueRouter {
   init(app) {
     // 当前的history实例：可能是HashHistory，也可能是BrowserHistory；
     const history = this.history
+    history.listen((route) => {
+      app._route = route
+    })
     // 设置监听器：内部调用的是不同子类中的实现
     const setUpListener = () => {
       history.setupListener()

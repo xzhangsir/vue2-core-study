@@ -8,6 +8,16 @@ class History {
     })
     console.log(this.current)
   }
+  push(location) {
+    // 跳转路径，并在跳转完成后更新 hash 值；
+    // transitionTo内部会查重：hash 值变化虽会再次跳转，但不会更新current属性;
+    this.transitionTo(location, () => {
+      window.location.hash = location // 更新hash值
+    })
+  }
+  listen(cb) {
+    this.cb = cb
+  }
   // 根据路径进行路由匹配，并添加路径改变的监听器
   transitionTo(location, cb) {
     // console.log('location', location)
@@ -23,8 +33,10 @@ class History {
       // 防止重复跳转
       return
     }
+
     this.current = createRoute(router, { path: location })
     console.log(this.current)
+    this.cb && this.cb(this.current)
     cb && cb()
   }
 }
