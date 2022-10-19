@@ -7,9 +7,7 @@ export default function createRouteMap(routes, oldPathMap) {
     addRouteRecord(route, pathMap)
   })
 
-  return {
-    pathMap
-  }
+  return pathMap
 }
 function addRouteRecord(route, pathMap, parent) {
   // 处理子路由时，需要做路径拼接

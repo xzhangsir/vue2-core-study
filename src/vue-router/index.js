@@ -54,6 +54,14 @@ VueRouter.install = (_vue) => {
         this._router = this.$options.router // this._router 指向 this.$options.router
         // 在根组件中，调用路由实例上的 init 方法，完成插件的初始化
         this._router.init(this) // this 为根实例
+
+        // 目标：让 this._router.history.current 成为响应式数据；
+        // 作用：current用于渲染时会进行依赖收集，当current更新时可以触发视图更新；
+        // 方案：在根组件实例上定义响应式数据 _route，将this._router.history.current对象中的属性依次代理到 _route 上；
+        // 优势：当current对象中的任何属性发生变化时，都会触发响应式更新；
+        // Vue.util.defineReactive: Vue 构造函数中提供的工具方法,用于定义响应式数据
+        Vue.util.defineReactive(this, '_route', this._router.history.current)
+        console.log(this._route)
       } else {
         // console.log(this.$parent)
         // 子组件
