@@ -34,6 +34,9 @@ export default class VueRouter {
     // 初始化时，获取当前hash值进行跳转, 并设置监听器
     history.transitionTo(history.getCurrentLocation(), setUpListener)
   }
+  push(to) {
+    this.history.push(to) // 子类对应的push实现
+  }
 }
 
 VueRouter.install = (_vue) => {
@@ -69,6 +72,17 @@ VueRouter.install = (_vue) => {
         this._routerRoot = this.$parent && this.$parent._routerRoot
       }
       // 这样，所有组件都能够通过 this._routerRoot._router 获取到同一个 router 实例；
+    }
+  })
+
+  Object.defineProperty(Vue.prototype, '$router', {
+    get() {
+      return this._routerRoot._router
+    }
+  })
+  Object.defineProperty(Vue.prototype, '$route', {
+    get() {
+      return this._routerRoot._route
     }
   })
 }
