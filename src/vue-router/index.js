@@ -1,6 +1,8 @@
 import RouterLink from './components/routerLink.jsx'
 import RouterView from './components/routerView'
 import createMatcher from './create-matcher.js'
+import HashHistory from './history/hash.js'
+import BrowserHistory from './history/history.js'
 let Vue
 
 export default class VueRouter {
@@ -9,6 +11,17 @@ export default class VueRouter {
     //[{},{}] =>{"/":{组件的相关信息},"/home":{}}
     // 路由匹配器返回两个核心方法：match、addRoutes
     this.matcher = createMatcher(options.routes || []) // options.routes 默认[]
+    // 根据不同的路由模式，生成对应的处理实例
+    options.mode = options.mode || 'hash' // 默认hash模式
+    switch (options.mode) {
+      case 'hash':
+        this.history = new HashHistory(this)
+        break
+      case 'history':
+        this.history = new BrowserHistory(this)
+        break
+    }
+    console.log(this)
   }
   // 路由初始化方法，供 install 安装时调用
   init(app) {}
