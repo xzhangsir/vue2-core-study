@@ -35,10 +35,34 @@ class History {
     }
 
     this.current = createRoute(router, { path: location })
-    console.log(this.current)
-    this.cb && this.cb(this.current)
-    cb && cb()
+    // console.log(this.current)
+    // 获取全局守卫的队列
+    let queue = [].concat(this.router.beforeHooks)
+    console.log('queue', queue)
+    //获取到注册的回调方法
+    const iterator = (hook, next) => {
+      hook(this.current, router, () => {
+        next()
+      })
+    }
+    runQueue(queue, iterator, () => {
+      // 1，使用当前路由route更新current，并执行其他回调
+      this.cb && this.cb(this.current)
+      // 根据路径加载不同的组件  this.router.matcher.match(location)  组件
+      // 2，渲染组件
+      cb && cb()
+    })
   }
+}
+
+function runQueue(queue, iterator, cb) {
+  //异步执行
+  function step(index) {
+    if (index >= queue.length) return cb()
+    let hook = queue[index]
+    iterator(hook, () => step(index + 1))
+  }
+  step(0)
 }
 
 export { History }

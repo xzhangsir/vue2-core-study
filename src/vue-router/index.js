@@ -21,6 +21,8 @@ export default class VueRouter {
         this.history = new BrowserHistory(this)
         break
     }
+    // 定义一个存放钩子函数的数组
+    this.beforeHooks = []
     console.log(this)
   }
   // 路由初始化方法，供 install 安装时调用
@@ -39,6 +41,10 @@ export default class VueRouter {
   }
   push(to) {
     this.history.push(to) // 子类对应的push实现
+  }
+  // 在router.beforeEach时，依次执行注册的钩子函数
+  beforeEach(fn) {
+    this.beforeHooks.push(fn)
   }
 }
 
@@ -89,3 +95,39 @@ VueRouter.install = (_vue) => {
     }
   })
 }
+
+/******路由守卫*****/
+// 全局
+//    前置守卫----router.beforeEach
+//    后置钩子----router.afterEach
+//    解析守卫----router.beforeResolve
+//        导航被确认之前，同时在所有组件内守卫和异步路由组件被解析之后，解析守卫就被调用
+// 路由独享的守卫 -- beforeEnter
+// 组件内的守卫
+//     beforeRouteEnter
+// 在渲染该组件的对应路由被 confirm 前调用
+// 不能获取组件实例 `this`
+// 因为当守卫执行前，组件实例还没被创建
+//     beforeRouteUpdate
+// 在当前路由改变，但是该组件被复用时调用
+// 举例来说，对于一个带有动态参数的路径 /foo/:id，在 /foo/1 和 /foo/2 之间跳转的时候，
+// 由于会渲染同样的 Foo 组件，因此组件实例会被复用。而这个钩子就会在这个情况下被调用。
+// 可以访问组件实例 `this`
+//     beforeRouteLeave
+// 导航离开该组件的对应路由时调用
+// 可以访问组件实例 `this`
+
+// 路由钩子的渲染流程（完整的导航解析流程）：
+
+// 导航被触发。
+// 在失活的组件里调用 beforeRouteLeave 守卫。
+// 调用全局的 beforeEach 守卫。
+// 在重用的组件里调用 beforeRouteUpdate 守卫 (2.2+)。
+// 在路由配置里调用 beforeEnter。
+// 解析异步路由组件。
+// 在被激活的组件里调用 beforeRouteEnter。
+// 调用全局的 beforeResolve 守卫 (2.5+)。
+// 导航被确认。
+// 调用全局的 afterEach 钩子。
+// 触发 DOM 更新。
+// 调用 beforeRouteEnter 守卫中传给 next 的回调函数，创建好的组件实例会作为回调函数的参数传入。
