@@ -1,76 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh_CN">
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <script src = "./vue.js"></script>
+  <script src="./vue.js"></script>
 </head>
 <body>
-    <div id = "app"  style = "color:red;font-size:12" key = "234">123{{list}}467{{name}}<h1>67676</h1></div>
-    <script>
-      Vue.mixin({
-          created:function a() {
-            console.log("全局混入");
-          },
-        });
-      let vm = new Vue({
-        el:"#app",
-        /* data:{
-          name:"zx"
-        } */
-        data(){
-          return{
-            name:"zx",
-            // user:{
-            //   age:12,
-            // },
-            list:[2,3,4]
-          }
-        },
-        created() {
-          console.log("局部");
-        },
-      })
-    /*   setTimeout(()=>{
-        console.log(vm)
-        // vm._data.list.push({a:1})
-        // vm._data.list[3].a = 34
-        // vm._data.name = "xm"
-        // vm._data.name = {
-        //   sex:"男"
-        // }
-        // console.log(vm._data.name);
-        //  vm._data.user.age = "19"
-
-        vm.name = "xm"
-        vm.name = "zxm"
-        // vm._update(vm._render()) //手动更新
-        // vm.list.push(233)
-        vm.list.push([33,44])
-      },1000) */
-
-   /*    vm.name = "xm"
-      // 打印的还是原来的
-      console.log(app.innerHTML)
-      Promise.resolve().then(()=>{
-        console.log(app.innerHTML)
-      })
-       */
-    /*   
-        vm.name = "xm"
-        // 打印的是新的
-        vm.$nextTick(()=>{
-          console.log(app.innerHTML)
-        })
-         */
-
-
-     vm.name = "xm"
-
-
-      
-    </script>
+  
 </body>
 </html>
