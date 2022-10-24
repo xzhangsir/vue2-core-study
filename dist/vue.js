@@ -35,6 +35,235 @@
     });
     return Constructor;
   }
+  function _slicedToArray(arr, i) {
+    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
+  }
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+  function _iterableToArrayLimit(arr, i) {
+    var _i = arr == null ? null : typeof Symbol !== "undefined" && arr[Symbol.iterator] || arr["@@iterator"];
+    if (_i == null) return;
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _s, _e;
+    try {
+      for (_i = _i.call(arr); !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+    return _arr;
+  }
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+    return arr2;
+  }
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
+  // 标签名
+  var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
+  // <span:xx>
+  var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
+  // 开始标签
+  var startTagOpen = new RegExp("^<".concat(qnameCapture));
+  // 结束标签
+  var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>"));
+  // 属性  第一个分组是属性的key  value在分组 3/4/5中
+  var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+  // <br/>
+  var startTagClose = /^\s*(\/?)>/;
+  // {{}}
+  var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g;
+  function parseHTML(html) {
+    var ELEMENT_TYPE = 1;
+    var TEXT_TYPE = 3;
+    var stack = [];
+    var root;
+    var currentParent; //永远指向栈中的最后一个
+    function createASTElement(tag, attrs) {
+      return {
+        tag: tag,
+        type: ELEMENT_TYPE,
+        children: [],
+        attrs: attrs,
+        parent: null
+      };
+    }
+    function start(tag, attrs) {
+      var node = createASTElement(tag, attrs);
+      if (!root) {
+        root = node;
+      }
+      if (currentParent) {
+        node.parent = currentParent;
+        currentParent.children.push(node);
+      }
+      stack.push(node);
+      currentParent = node;
+    }
+    function end() {
+      stack.pop();
+      currentParent = stack[stack.length - 1];
+    }
+    function chars(text) {
+      text = text.replace(/\s/g, '');
+      if (text) {
+        currentParent.children.push({
+          type: TEXT_TYPE,
+          text: text,
+          parent: currentParent
+        });
+      }
+    }
+    function advance(n) {
+      html = html.substring(n);
+    }
+    function parseStartTag() {
+      var start = html.match(startTagOpen);
+      // console.log('start', start)
+      if (start) {
+        var match = {
+          tagName: start[1],
+          attrs: []
+        };
+        advance(start[0].length);
+        // 如果不是开始标签的结束 就一直匹配下去
+        var attr, _end;
+        while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+          match.attrs.push({
+            name: attr[1],
+            value: attr[3] || attr[4] || attr[5]
+          });
+          advance(attr[0].length);
+        }
+        if (_end) {
+          advance(_end[0].length);
+        }
+        return match;
+      }
+      return false;
+    }
+    while (html) {
+      var textEnd = html.indexOf('<');
+      if (textEnd === 0) {
+        // 标签
+        var startTagMatch = parseStartTag();
+        if (startTagMatch) {
+          start(startTagMatch.tagName, startTagMatch.attrs);
+          continue;
+        }
+        var endTagMatch = html.match(endTag);
+        if (endTagMatch) {
+          advance(endTagMatch[0].length);
+          end(endTagMatch[2]);
+          continue;
+        }
+      }
+      if (textEnd > 0) {
+        var text = html.substring(0, textEnd);
+        if (text) {
+          chars(text);
+          advance(text.length);
+        }
+      }
+    }
+    return root;
+  }
+
+  function gen(node) {
+    if (node.type === 1) {
+      return codegen(node);
+    } else {
+      var text = node.text;
+      if (!defaultTagRE.test(text)) {
+        // 纯文本
+        return "_v(".concat(JSON.stringify(text), ")");
+      } else {
+        //有插值表达式
+        defaultTagRE.lastIndex = 0;
+        var match;
+        var lastIndex = 0;
+        var tokens = [];
+        while (match = defaultTagRE.exec(text)) {
+          var index = match.index;
+          if (index > lastIndex) {
+            tokens.push(JSON.stringify(text.slice(lastIndex, index)));
+          }
+          tokens.push("_s(".concat(match[1].trim(), ")"));
+          lastIndex = index + match[0].length;
+        }
+        if (lastIndex < text.length) {
+          tokens.push(JSON.stringify(text.slice(lastIndex)));
+        }
+        return "_v(".concat(tokens.join('+'), ")");
+      }
+    }
+  }
+  function genChildren(children) {
+    if (children) {
+      return children.map(function (child) {
+        return gen(child);
+      }).join(',');
+    }
+  }
+  function genProps(attrs) {
+    var str = '';
+    for (var i = 0; i < attrs.length; i++) {
+      var attr = attrs[i];
+      if (attr.name == 'style') {
+        (function () {
+          var obj = {};
+          attr.value.split(';').forEach(function (item) {
+            var _item$split = item.split(':'),
+              _item$split2 = _slicedToArray(_item$split, 2),
+              key = _item$split2[0],
+              value = _item$split2[1];
+            obj[key] = value;
+          });
+          attr.value = obj;
+        })();
+      }
+      str += "".concat(attr.name, ":").concat(JSON.stringify(attr.value), ",");
+    }
+    return "{".concat(str.slice(0, -1), "}");
+  }
+  function codegen(ast) {
+    var children = genChildren(ast.children);
+    var code = "_c('".concat(ast.tag, "',").concat(ast.attrs.length > 0 ? genProps(ast.attrs) : 'null').concat(ast.children.length ? ",".concat(children) : '', ")");
+    return code;
+  }
+  function compileToFunction(el) {
+    var ast = parseHTML(el);
+    // console.log(ast)
+    var code = codegen(ast);
+    // console.log(code)
+    code = "with(this){return ".concat(code, "}");
+    console.log('code', code);
+    var render = new Function(code);
+    return render;
+  }
 
   function isObject(data) {
     return data !== null && _typeof(data) === 'object';
@@ -155,11 +384,49 @@
     });
   }
 
+  function renderMixin(Vue) {
+    Vue.prototype._c = function () {
+      // createElement 创建元素型的节点
+      console.log(arguments);
+    };
+    Vue.prototype._v = function () {
+      // 创建文本的虚拟节点
+      console.log(arguments);
+    };
+    Vue.prototype._s = function () {
+      // JSON.stringify
+      console.log(arguments);
+    };
+    Vue.prototype._update = function () {
+      console.log('upate');
+    };
+    Vue.prototype._render = function () {
+      console.log('render');
+    };
+  }
+
   function initMixin(Vue) {
     Vue.prototype.__init = function (options) {
       var vm = this;
       vm.$options = options;
       initState(vm);
+      if (vm.$options.el) {
+        vm.$mount(vm.$options.el);
+      }
+    };
+    Vue.prototype.$mount = function (el) {
+      var vm = this;
+      el = document.querySelector(el);
+      vm.$el = el;
+      var options = vm.$options;
+      if (!options.render) {
+        var template = options.template;
+        if (!template && el) {
+          template = el.outerHTML;
+        }
+        var render = compileToFunction(template);
+        options.render = render;
+      }
     };
   }
 
@@ -167,6 +434,7 @@
     this.__init(options);
   }
   initMixin(Vue);
+  renderMixin(Vue);
 
   return Vue;
 
