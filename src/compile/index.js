@@ -67,7 +67,7 @@ export function compileToFunction(el) {
   let code = codegen(ast)
   // console.log(code)
   code = `with(this){return ${code}}`
-  console.log('code', code)
+  // console.log('code', code)
   let render = new Function(code)
   return render
 }

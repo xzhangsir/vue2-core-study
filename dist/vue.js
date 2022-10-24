@@ -260,7 +260,7 @@
     var code = codegen(ast);
     // console.log(code)
     code = "with(this){return ".concat(code, "}");
-    console.log('code', code);
+    // console.log('code', code)
     var render = new Function(code);
     return render;
   }
@@ -386,7 +386,6 @@
 
   function createElementVNode(vm, tag, data) {
     data = data || {};
-    data.key;
     for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
       children[_key - 3] = arguments[_key];
     }
@@ -407,8 +406,54 @@
   }
 
   function patch(oldVnode, vnode) {
-    console.log('oldVnode', oldVnode);
-    console.log('vnode', vnode);
+    // console.log('oldVnode', oldVnode)
+    // console.log('vnode', vnode)
+    // 初次渲染
+    var isRealElement = oldVnode.nodeType;
+    // 判断是不是真实元素
+    if (isRealElement) {
+      // 获取真实元素
+      var elm = oldVnode;
+      // 拿到父元素
+      var parentElm = elm.parentNode;
+      var newElm = createElm(vnode);
+      parentElm.insertBefore(newElm, elm.nexSibling);
+      parentElm.removeChild(elm);
+      return newElm;
+    }
+  }
+  function createElm(vnode) {
+    var tag = vnode.tag,
+      data = vnode.data,
+      children = vnode.children,
+      text = vnode.text;
+    // 通过 tag 判断当前节点是元素 or 文本,判断逻辑：文本 tag 是 undefined
+    if (typeof tag === 'string') {
+      vnode.el = document.createElement(tag); // 创建元素的真实节点
+      // 处理 data 属性
+      updateProperties(vnode.el, data);
+      // 继续处理元素的儿子：递归创建真实节点并添加到对应的父亲上
+      children.forEach(function (child) {
+        // 若不存在儿子，children为空数组，循环终止
+        vnode.el.appendChild(createElm(child));
+      });
+    } else {
+      vnode.el = document.createTextNode(text); // 创建文本的真实节点
+    }
+
+    return vnode.el;
+  }
+  function updateProperties(el) {
+    var props = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    for (var key in props) {
+      if (key === 'style') {
+        for (var styleName in props.style) {
+          el.style[styleName] = props.style[styleName];
+        }
+      } else {
+        el.setAttribute(key, props[key]);
+      }
+    }
   }
 
   function renderMixin(Vue) {
