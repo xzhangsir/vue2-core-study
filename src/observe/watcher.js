@@ -1,4 +1,5 @@
 import Dep, { popTarget, pushTarget } from './dep'
+import { queueWatcher } from './scheduler'
 
 let id = 0
 
@@ -34,6 +35,12 @@ class Watcher {
     }
   }
   update() {
+    // console.log('更新ll')
+    // this.get()
+    // 异步更新
+    queueWatcher(this)
+  }
+  run() {
     console.log('更新')
     this.get()
   }

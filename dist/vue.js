@@ -339,7 +339,7 @@
     Dep.target = targetStack[targetStack.length - 1];
   }
 
-  function observer(data) {
+  function observer$1(data) {
     if (!isObject(data)) {
       return; //只对对象进行劫持
     }
@@ -379,7 +379,7 @@
       key: "observerArray",
       value: function observerArray(data) {
         for (var i = 0; i < data.length; i++) {
-          observer(data[i]);
+          observer$1(data[i]);
         }
       }
     }]);
@@ -395,7 +395,7 @@
     }
   }
   function defineReactive(data, key, value) {
-    var childOb = observer(value);
+    var childOb = observer$1(value);
     var dep = new Dep();
     Object.defineProperty(data, key, {
       enumerable: true,
@@ -415,7 +415,7 @@
       },
       set: function set(newVal) {
         if (value === newVal) return;
-        observer(newVal);
+        observer$1(newVal);
         value = newVal;
         dep.notify();
       }
@@ -448,7 +448,7 @@
     for (var key in data) {
       proxy(vm, '_data', key);
     }
-    observer(data);
+    observer$1(data);
   }
   function proxy(vm, source, key) {
     Object.defineProperty(vm, key, {
@@ -459,6 +459,72 @@
         return vm[source][key] = newVal;
       }
     });
+  }
+
+  var callBacks = [];
+  var pending = false;
+  function flushCallbacks() {
+    var cbs = callBacks.slice(0);
+    pending = false;
+    callBacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  }
+  var timerFunc;
+  if (typeof Promise !== 'undefined') {
+    // 如果支持 Promise
+    var p = Promise.resolve();
+    timerFunc = function timerFunc() {
+      p.then(flushCallbacks);
+    };
+  } else if (typeof MutationObserver !== 'undefined') {
+    // MutationObserver 主要监听dom变化
+    var counter = 1;
+    var observer = new MutationObserver(flushCallbacks);
+    var textNode = document.createTextNode(String(counter));
+    observer.observe(textNode, {
+      characterData: true
+    });
+    timerFunc = function timerFunc() {
+      counter = (counter + 1) % 2;
+      textNode.data = String(counter);
+      //counter变化    flushCallbacks执行
+    };
+  } else if (setImmediate) {
+    timerFunc = function timerFunc() {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(flushCallbacks, 0);
+    };
+  }
+  function nextTick(cb) {
+    callBacks.push(cb);
+    if (!pending) {
+      pending = true;
+      timerFunc();
+    }
+  }
+
+  var queue = [];
+  var has = {};
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true;
+      nextTick(flushSchedulerQueue);
+    }
+  }
+  function flushSchedulerQueue() {
+    var flushQueue = queue.slice(0);
+    flushQueue.forEach(function (q) {
+      return q.run();
+    });
+    queue = [];
+    has = {};
   }
 
   var id = 0;
@@ -501,6 +567,14 @@
     }, {
       key: "update",
       value: function update() {
+        // console.log('更新ll')
+        // this.get()
+        // 异步更新
+        queueWatcher(this);
+      }
+    }, {
+      key: "run",
+      value: function run() {
         console.log('更新');
         this.get();
       }
@@ -645,6 +719,7 @@
   }
   initMixin(Vue);
   renderMixin(Vue);
+  Vue.prototype.$nextTick = nextTick;
 
   return Vue;
 
