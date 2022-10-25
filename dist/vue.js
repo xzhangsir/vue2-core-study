@@ -82,6 +82,65 @@
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
+  function isObject(data) {
+    return data !== null && _typeof(data) === 'object';
+  }
+
+  // 定义生命周期
+  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
+  var strats = {}; // 存放所有策略
+
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    // 创建生命周期的合并策略
+    strats[hook] = function (parentVal, childVal) {
+      if (childVal) {
+        if (parentVal) {
+          return parentVal.concat(childVal);
+        } else {
+          if (Array.isArray(childVal)) {
+            return childVal;
+          } else {
+            return [childVal];
+          }
+        }
+      } else {
+        return parentVal;
+      }
+    };
+  });
+  function mergeOptions(parentVal, childVal) {
+    // console.log(parentVal, childVal)
+    var options = {};
+    for (var key in parentVal) {
+      mergeFiled(key);
+    }
+    for (var _key in childVal) {
+      if (!parentVal.hasOwnProperty(_key)) {
+        mergeFiled(_key);
+      }
+    }
+    function mergeFiled(key) {
+      if (strats[key]) {
+        options[key] = strats[key](parentVal[key], childVal[key]);
+      } else {
+        // 默认合并方法：优先使用新值覆盖老值
+        options[key] = childVal[key] || parentVal[key];
+      }
+    }
+    return options;
+  }
+
+  function initGlobalAPI(Vue) {
+    // 全局属性：Vue.options
+    // 功能：存放 mixin, component, filte, directive 属性
+    Vue.options = {};
+    Vue.mixin = function (options) {
+      this.options = mergeOptions(this.options, options);
+      console.log(this.options);
+      return this;
+    };
+  }
+
   // 标签名
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
   // <span:xx>
@@ -263,10 +322,6 @@
     // console.log('code', code)
     var render = new Function(code);
     return render;
-  }
-
-  function isObject(data) {
-    return data !== null && _typeof(data) === 'object';
   }
 
   var oldArrayMethods = Array.prototype;
@@ -685,14 +740,32 @@
     var updateComponent = function updateComponent() {
       vm._update(vm._render());
     };
+    callHook(vm, 'beforeMount');
     new Watcher(vm, updateComponent, function () {}, true);
+    // 当视图挂载完成，调用钩子: mounted
+    callHook(vm, 'mounted');
+  }
+  //从$options取对应的生命周期函数数组并执行
+  function callHook(vm, hook) {
+    // 获取生命周期对应函数数组
+    var handlers = vm.$options[hook];
+    if (handlers) {
+      handlers.forEach(function (fn) {
+        fn.call(vm); // 生命周期中的 this 指向 vm 实例
+      });
+    }
   }
 
   function initMixin(Vue) {
     Vue.prototype.__init = function (options) {
       var vm = this;
-      vm.$options = options;
+      // vm.$options = options
+      // 此时需使用 options 与 mixin 合并后的全局 options 再进行一次合并
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      console.log(vm.$options);
+      callHook(vm, 'beforeCreate');
       initState(vm);
+      callHook(vm, 'created');
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
       }
@@ -719,6 +792,7 @@
   }
   initMixin(Vue);
   renderMixin(Vue);
+  initGlobalAPI(Vue);
   Vue.prototype.$nextTick = nextTick;
 
   return Vue;

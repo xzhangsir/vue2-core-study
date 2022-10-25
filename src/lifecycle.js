@@ -36,5 +36,18 @@ export function mountComponent(vm, el) {
   let updateComponent = () => {
     vm._update(vm._render())
   }
+  callHook(vm, 'beforeMount')
   new Watcher(vm, updateComponent, () => {}, true)
+  // 当视图挂载完成，调用钩子: mounted
+  callHook(vm, 'mounted')
+}
+//从$options取对应的生命周期函数数组并执行
+export function callHook(vm, hook) {
+  // 获取生命周期对应函数数组
+  let handlers = vm.$options[hook]
+  if (handlers) {
+    handlers.forEach((fn) => {
+      fn.call(vm) // 生命周期中的 this 指向 vm 实例
+    })
+  }
 }

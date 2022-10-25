@@ -1,12 +1,18 @@
 import { compileToFunction } from './compile/index'
 import { initState } from './initState'
-import { mountComponent } from './lifecycle'
+import { callHook, mountComponent } from './lifecycle'
+import { mergeOptions } from './utils/index'
 
 export function initMixin(Vue) {
   Vue.prototype.__init = function (options) {
     let vm = this
-    vm.$options = options
+    // vm.$options = options
+    // 此时需使用 options 与 mixin 合并后的全局 options 再进行一次合并
+    vm.$options = mergeOptions(vm.constructor.options, options)
+    console.log(vm.$options)
+    callHook(vm, 'beforeCreate')
     initState(vm)
+    callHook(vm, 'created')
     if (vm.$options.el) {
       vm.$mount(vm.$options.el)
     }

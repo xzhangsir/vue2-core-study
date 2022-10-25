@@ -10,25 +10,35 @@
 <body>
   <div id="app" style = "color:red;font-size:12">123{{name}}467{{list}}<h1>67676</h1></div>
   <script>
+      Vue.mixin({
+        created: function a() {
+          console.log("全局混入--1");
+        },
+      });
+      Vue.mixin({
+          created: function b() {
+            console.log("全局混入--2");
+          },
+        });
       let vm = new Vue({
               el: "#app",
               data() {
                 return {
                   name: "zx",
-                  // user:{
-                  //   age:12,
-                  // },
                   list: [2, 3, 4]
                 }
+              },
+              created(){
+                console.log("局部")
+              },
+              beforeMount(){
+                console.log("beforeMount")
               }
             })
-    setTimeout(() => {
-      vm.list.push({a:1})
-      vm.name = "xm"
-      vm.list[3].a = "98"
-      console.log(vm)
-      // vm._update(vm._render())  //手动更新
-    }, 1000)
+    
+      setTimeout(()=>{
+        vm.name = "xm"
+      },1000)
   </script>
 </body>
 </html>
