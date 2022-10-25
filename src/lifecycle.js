@@ -1,3 +1,4 @@
+import Watcher from './observe/watcher'
 import { isObject } from './utils/index'
 import { createElementVNode, createTextVNode } from './vdom/index'
 import { patch } from './vdom/patch'
@@ -32,5 +33,8 @@ export function renderMixin(Vue) {
 }
 
 export function mountComponent(vm, el) {
-  vm._update(vm._render())
+  let updateComponent = () => {
+    vm._update(vm._render())
+  }
+  new Watcher(vm, updateComponent, () => {}, true)
 }

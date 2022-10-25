@@ -272,12 +272,14 @@
   var oldArrayMethods = Array.prototype;
   var ArrayMethods = Object.create(oldArrayMethods);
   var methods = ['push', 'pop', 'unshift', 'shift', 'splice', 'sort', 'reverse'];
-  var _loop = function _loop(method) {
+  methods.forEach(function (method) {
     ArrayMethods[method] = function () {
+      var _oldArrayMethods$meth;
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
       }
-      var result = oldArrayMethods[method].apply(this, args);
+      var result = (_oldArrayMethods$meth = oldArrayMethods[method]).call.apply(_oldArrayMethods$meth, [this].concat(args));
+      var ob = this.__ob__;
       var inserted; // 新增的值
       switch (method) {
         case 'push':
@@ -289,27 +291,73 @@
           break;
       }
       if (inserted) {
-        this.__ob__.observeArray(inserted);
+        ob.observerArray(inserted);
       }
+      ob.dep.notify();
       return result;
     };
-  };
-  for (var method in methods) {
-    _loop(method);
+  });
+
+  var id$1 = 0;
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+      this.id = id$1++;
+      this.subs = [];
+    }
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        Dep.target.addDep(this);
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }]);
+    return Dep;
+  }();
+  Dep.target = null;
+
+  // 用栈来保存watcher
+  var targetStack = [];
+  function pushTarget(watcher) {
+    targetStack.push(watcher);
+    Dep.target = watcher; // Dep.target指向当前watcher
+  }
+
+  function popTarget() {
+    targetStack.pop(); // 当前watcher出栈 拿到上一个watcher
+    Dep.target = targetStack[targetStack.length - 1];
   }
 
   function observer(data) {
-    if (isObject(data)) {
-      return data;
+    if (!isObject(data)) {
+      return; //只对对象进行劫持
     }
+    // if (data.__ob__ instanceof Observer) {
+    //   // 说明这个对象被代理过了
+    //   return data.__ob__
+    // }
     return new Observer(data);
   }
   var Observer = /*#__PURE__*/function () {
     function Observer(value) {
       _classCallCheck(this, Observer);
+      this.dep = new Dep();
       Object.defineProperty(value, '__ob__', {
         enumerable: false,
-        value: this
+        value: this,
+        writable: true,
+        configurable: true
       });
       if (Array.isArray(value)) {
         value.__proto__ = ArrayMethods;
@@ -337,19 +385,48 @@
     }]);
     return Observer;
   }();
+  function dependArray(value) {
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
   function defineReactive(data, key, value) {
-    observer(value);
+    var childOb = observer(value);
+    var dep = new Dep();
     Object.defineProperty(data, key, {
+      enumerable: true,
+      configurable: true,
       get: function get() {
+        if (Dep.target) {
+          dep.depend();
+          if (childOb) {
+            childOb.dep.depend();
+            // 数组里面嵌套数组
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
+          }
+        }
         return value;
       },
       set: function set(newVal) {
         if (value === newVal) return;
         observer(newVal);
         value = newVal;
+        dep.notify();
       }
     });
   }
+
+  // dep.depend ->
+  //     Watcher.addDep(this)
+  //       this.deps.push(dep) //watcher记住dep
+  //       dep.addSub(wathcer) //dep 记住 watcher
+  //           this.subs.push(watcher)
 
   function initState(vm) {
     var options = vm.$options;
@@ -383,6 +460,53 @@
       }
     });
   }
+
+  var id = 0;
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, exprOrFn, cb, options) {
+      _classCallCheck(this, Watcher);
+      this.id = id++;
+      this.vm = vm;
+      this.exprOrFn = exprOrFn;
+      this.cb = cb;
+      this.options = options;
+      this.deps = [];
+      this.depsId = new Set();
+      if (typeof exprOrFn === 'function') {
+        this.getter = exprOrFn;
+      }
+      this.get();
+    }
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        // Dep.target = this
+        pushTarget(this);
+        this.getter();
+        // Dep.target = null
+        popTarget();
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+        if (!this.depsId.has(id)) {
+          // 让watcher记住dep
+          this.deps.push(dep);
+          this.depsId.add(id);
+          // 让dep记住watcher
+          dep.addSub(this);
+        }
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        console.log('更新');
+        this.get();
+      }
+    }]);
+    return Watcher;
+  }();
 
   function createElementVNode(vm, tag, data) {
     data = data || {};
@@ -484,7 +608,10 @@
     };
   }
   function mountComponent(vm, el) {
-    vm._update(vm._render());
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
+    new Watcher(vm, updateComponent, function () {}, true);
   }
 
   function initMixin(Vue) {

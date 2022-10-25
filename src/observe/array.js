@@ -1,11 +1,12 @@
 let oldArrayMethods = Array.prototype
 
-export let ArrayMethods = Object.create(oldArrayMethods)
+export const ArrayMethods = Object.create(oldArrayMethods)
 let methods = ['push', 'pop', 'unshift', 'shift', 'splice', 'sort', 'reverse']
 
-for (let method in methods) {
+methods.forEach((method) => {
   ArrayMethods[method] = function (...args) {
-    let result = oldArrayMethods[method].apply(this, args)
+    let result = oldArrayMethods[method].call(this, ...args)
+    let ob = this.__ob__
     let inserted // 新增的值
     switch (method) {
       case 'push':
@@ -19,8 +20,9 @@ for (let method in methods) {
         break
     }
     if (inserted) {
-      this.__ob__.observeArray(inserted)
+      ob.observerArray(inserted)
     }
+    ob.dep.notify()
     return result
   }
-}
+})
