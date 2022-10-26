@@ -14,6 +14,8 @@ class Watcher {
     this.deps = []
     this.depsId = new Set()
     this.user = options.user
+    this.lazy = options.lazy
+    this.dirty = this.lazy
     if (typeof exprOrFn === 'function') {
       this.getter = exprOrFn
     } else if (typeof exprOrFn === 'string') {
@@ -27,15 +29,27 @@ class Watcher {
         return obj
       }
     }
-    this.value = this.get()
+    this.value = this.lazy ? undefined : this.get()
   }
   get() {
     // Dep.target = this
     pushTarget(this)
-    let res = this.getter()
+    let res = this.getter.call(this.vm)
     // Dep.target = null
     popTarget()
     return res
+  }
+  evaluate() {
+    this.value = this.get()
+    this.dirty = false
+  }
+  depend() {
+    // 计算属性的watcher存储了依赖项的dep
+    let i = this.deps.length
+    while (i--) {
+      //调用依赖项的dep去收集渲染watcher
+      this.deps[i].depend()
+    }
   }
   addDep(dep) {
     let id = dep.id
@@ -51,7 +65,12 @@ class Watcher {
     // console.log('更新ll')
     // this.get()
     // 异步更新
-    queueWatcher(this)
+    //queueWatcher(this)
+    if (this.lazy) {
+      this.dirty = true
+    } else {
+      queueWatcher(this)
+    }
   }
   run() {
     console.log('更新')

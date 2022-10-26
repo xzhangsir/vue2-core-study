@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="zh_CN">
+<html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -7,30 +8,31 @@
   <title>Document</title>
   <script src="./vue.js"></script>
 </head>
-<body>
-  <div id="app">{{name}}</div>
-  <script>
-      let vm = new Vue({
-              el: "#app",
-              data() {
-                return {
-                  name:'zx'
-                }
-              },
-              watch:{
-                name(newVal,oldVal){
-                  console.log(newVal,oldVal)
-                }
-              }
-            })
-            setTimeout(() => {
-                vm.name = "xm"
-              }, 1000)
 
-    // 所有的watch写法都会转化为下面的$watch写法
-    // vm.$watch(() => vm.name, (newVal, oldVal) => {
-    //   console.log("newVal", newVal, "oldVal", oldVal)
-    // })
+<body>
+  <div id="app">{{fullName}}{{fullName}}</div>
+  <script>
+
+    let vm = new Vue({
+      el: "#app",
+      data() {
+        return {
+          firstName: "zx",
+          lastName: "xm"
+        }
+      },
+      computed: {
+        fullName() {
+          console.log("run");
+          return this.firstName + this.lastName
+        }
+      }
+    })
+    setTimeout(() => {
+      vm.firstName = "xin"
+    }, 2000)
+
   </script>
 </body>
+
 </html>

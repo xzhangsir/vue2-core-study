@@ -398,35 +398,6 @@
     return render;
   }
 
-  var oldArrayMethods = Array.prototype;
-  var ArrayMethods = Object.create(oldArrayMethods);
-  var methods = ['push', 'pop', 'unshift', 'shift', 'splice', 'sort', 'reverse'];
-  methods.forEach(function (method) {
-    ArrayMethods[method] = function () {
-      var _oldArrayMethods$meth;
-      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-        args[_key] = arguments[_key];
-      }
-      var result = (_oldArrayMethods$meth = oldArrayMethods[method]).call.apply(_oldArrayMethods$meth, [this].concat(args));
-      var ob = this.__ob__;
-      var inserted; // 新增的值
-      switch (method) {
-        case 'push':
-        case 'unshift':
-          inserted = args;
-          break;
-        case 'splice':
-          inserted = args.slice(2);
-          break;
-      }
-      if (inserted) {
-        ob.observerArray(inserted);
-      }
-      ob.dep.notify();
-      return result;
-    };
-  });
-
   var id$1 = 0;
   var Dep = /*#__PURE__*/function () {
     function Dep() {
@@ -467,6 +438,35 @@
     targetStack.pop(); // 当前watcher出栈 拿到上一个watcher
     Dep.target = targetStack[targetStack.length - 1];
   }
+
+  var oldArrayMethods = Array.prototype;
+  var ArrayMethods = Object.create(oldArrayMethods);
+  var methods = ['push', 'pop', 'unshift', 'shift', 'splice', 'sort', 'reverse'];
+  methods.forEach(function (method) {
+    ArrayMethods[method] = function () {
+      var _oldArrayMethods$meth;
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+      var result = (_oldArrayMethods$meth = oldArrayMethods[method]).call.apply(_oldArrayMethods$meth, [this].concat(args));
+      var ob = this.__ob__;
+      var inserted; // 新增的值
+      switch (method) {
+        case 'push':
+        case 'unshift':
+          inserted = args;
+          break;
+        case 'splice':
+          inserted = args.slice(2);
+          break;
+      }
+      if (inserted) {
+        ob.observerArray(inserted);
+      }
+      ob.dep.notify();
+      return result;
+    };
+  });
 
   function observer$1(data) {
     if (!isObject(data)) {
@@ -557,70 +557,6 @@
   //       dep.addSub(wathcer) //dep 记住 watcher
   //           this.subs.push(watcher)
 
-  function initState(vm) {
-    var options = vm.$options;
-    if (options.data) {
-      initData(vm);
-    }
-    if (options.watch) {
-      initWatch$1(vm);
-    }
-  }
-  function initWatch$1(vm) {
-    var watch = vm.$options.watch;
-    var _loop = function _loop(k) {
-      var handler = watch[k];
-      if (Array.isArray(handler)) {
-        handler.forEach(function (handle) {
-          createWatcher(vm, k, handle);
-        });
-      } else {
-        createWatcher(vm, k, handler);
-      }
-    };
-    for (var k in watch) {
-      _loop(k);
-    }
-  }
-  function createWatcher(vm, exprOrFn, handler) {
-    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-    if (isObject(handler)) {
-      options = handler; //保存用户传入的对象
-      handler = handler.handler; //这个代表真正用户传入的函数
-    }
-
-    if (typeof handler === 'string') {
-      handler = vm[handler];
-    }
-    return vm.$watch(exprOrFn, handler, options);
-  }
-  function initData(vm) {
-    var data = vm.$options.data;
-    if (isObject(data)) {
-      data = data;
-    } else if (typeof data === 'function') {
-      data = data.call(vm);
-    } else {
-      console.error('data type error');
-      return false;
-    }
-    vm._data = data;
-    for (var key in data) {
-      proxy(vm, '_data', key);
-    }
-    observer$1(data);
-  }
-  function proxy(vm, source, key) {
-    Object.defineProperty(vm, key, {
-      get: function get() {
-        return vm[source][key];
-      },
-      set: function set(newVal) {
-        return vm[source][key] = newVal;
-      }
-    });
-  }
-
   var callBacks = [];
   var pending = false;
   function flushCallbacks() {
@@ -699,6 +635,8 @@
       this.deps = [];
       this.depsId = new Set();
       this.user = options.user;
+      this.lazy = options.lazy;
+      this.dirty = this.lazy;
       if (typeof exprOrFn === 'function') {
         this.getter = exprOrFn;
       } else if (typeof exprOrFn === 'string') {
@@ -712,17 +650,33 @@
           return obj;
         };
       }
-      this.value = this.get();
+      this.value = this.lazy ? undefined : this.get();
     }
     _createClass(Watcher, [{
       key: "get",
       value: function get() {
         // Dep.target = this
         pushTarget(this);
-        var res = this.getter();
+        var res = this.getter.call(this.vm);
         // Dep.target = null
         popTarget();
         return res;
+      }
+    }, {
+      key: "evaluate",
+      value: function evaluate() {
+        this.value = this.get();
+        this.dirty = false;
+      }
+    }, {
+      key: "depend",
+      value: function depend() {
+        // 计算属性的watcher存储了依赖项的dep
+        var i = this.deps.length;
+        while (i--) {
+          //调用依赖项的dep去收集渲染watcher
+          this.deps[i].depend();
+        }
       }
     }, {
       key: "addDep",
@@ -742,7 +696,12 @@
         // console.log('更新ll')
         // this.get()
         // 异步更新
-        queueWatcher(this);
+        //queueWatcher(this)
+        if (this.lazy) {
+          this.dirty = true;
+        } else {
+          queueWatcher(this);
+        }
       }
     }, {
       key: "run",
@@ -763,6 +722,110 @@
     }]);
     return Watcher;
   }();
+
+  function initState(vm) {
+    var options = vm.$options;
+    if (options.data) {
+      initData(vm);
+    }
+    if (options.watch) {
+      initWatch$1(vm);
+    }
+    if (options.computed) {
+      initComputed(vm);
+    }
+  }
+  function initWatch$1(vm) {
+    var watch = vm.$options.watch;
+    var _loop = function _loop(k) {
+      var handler = watch[k];
+      if (Array.isArray(handler)) {
+        handler.forEach(function (handle) {
+          createWatcher(vm, k, handle);
+        });
+      } else {
+        createWatcher(vm, k, handler);
+      }
+    };
+    for (var k in watch) {
+      _loop(k);
+    }
+  }
+  function initComputed(vm) {
+    var computed = vm.$options.computed;
+    var watchers = vm._computedWatchers = {};
+    for (var key in computed) {
+      var userDef = computed[key];
+      var getter = typeof userDef === 'function' ? userDef : userDef.get;
+      watchers[key] = new Watcher(vm, getter, function () {}, {
+        lazy: true
+      });
+      defineComputed(vm, key, userDef);
+    }
+  }
+  function defineComputed(target, key, userDef) {
+    var setter = userDef.set || function () {};
+    Object.defineProperty(target, key, {
+      enumerable: true,
+      configurable: true,
+      // 判断这个数据是不是脏的
+      get: createComputedGetter(key),
+      set: setter
+    });
+  }
+  function createComputedGetter(key) {
+    return function () {
+      var watcher = this._computedWatchers[key];
+      if (watcher.dirty) {
+        // 如果数据是脏的 就去执行用户传入的函数
+        watcher.evaluate();
+      }
+      if (Dep.target) {
+        //计算属性出栈后 还有渲染watcher
+        // 我应该让计算属性watcher里面的属性 也去收集上层watcher
+        watcher.depend();
+      }
+      return watcher.value;
+    };
+  }
+  function createWatcher(vm, exprOrFn, handler) {
+    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+    if (isObject(handler)) {
+      options = handler; //保存用户传入的对象
+      handler = handler.handler; //这个代表真正用户传入的函数
+    }
+
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+    return vm.$watch(exprOrFn, handler, options);
+  }
+  function initData(vm) {
+    var data = vm.$options.data;
+    if (isObject(data)) {
+      data = data;
+    } else if (typeof data === 'function') {
+      data = data.call(vm);
+    } else {
+      console.error('data type error');
+      return false;
+    }
+    vm._data = data;
+    for (var key in data) {
+      proxy(vm, '_data', key);
+    }
+    observer$1(data);
+  }
+  function proxy(vm, source, key) {
+    Object.defineProperty(vm, key, {
+      get: function get() {
+        return vm[source][key];
+      },
+      set: function set(newVal) {
+        return vm[source][key] = newVal;
+      }
+    });
+  }
 
   function createElementVNode(vm, tag, data) {
     data = data || {};

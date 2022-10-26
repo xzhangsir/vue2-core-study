@@ -1,4 +1,6 @@
+import Dep from './observe/dep'
 import { observer } from './observe/index'
+import Watcher from './observe/watcher'
 import { isObject } from './utils/index'
 
 export function initState(vm) {
@@ -8,6 +10,9 @@ export function initState(vm) {
   }
   if (options.watch) {
     initWatch(vm)
+  }
+  if (options.computed) {
+    initComputed(vm)
   }
 }
 
@@ -22,6 +27,44 @@ function initWatch(vm) {
     } else {
       createWatcher(vm, k, handler)
     }
+  }
+}
+
+function initComputed(vm) {
+  const computed = vm.$options.computed
+  const watchers = (vm._computedWatchers = {})
+  for (let key in computed) {
+    let userDef = computed[key]
+    let getter = typeof userDef === 'function' ? userDef : userDef.get
+    watchers[key] = new Watcher(vm, getter, () => {}, { lazy: true })
+    defineComputed(vm, key, userDef)
+  }
+}
+
+function defineComputed(target, key, userDef) {
+  const setter = userDef.set || (() => {})
+  Object.defineProperty(target, key, {
+    enumerable: true,
+    configurable: true,
+    // 判断这个数据是不是脏的
+    get: createComputedGetter(key),
+    set: setter
+  })
+}
+
+function createComputedGetter(key) {
+  return function () {
+    const watcher = this._computedWatchers[key]
+    if (watcher.dirty) {
+      // 如果数据是脏的 就去执行用户传入的函数
+      watcher.evaluate()
+    }
+    if (Dep.target) {
+      //计算属性出栈后 还有渲染watcher
+      // 我应该让计算属性watcher里面的属性 也去收集上层watcher
+      watcher.depend()
+    }
+    return watcher.value
   }
 }
 
