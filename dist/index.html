@@ -10,26 +10,24 @@
 </head>
 
 <body>
-  <div id="app">{{fullName}}{{fullName}}</div>
+  <div id="app">{{list}}{{user.name}}{{user.age}}</div>
   <script>
 
     let vm = new Vue({
       el: "#app",
       data() {
         return {
-          firstName: "zx",
-          lastName: "xm"
+          list:[1,2,3],
+          user:{
+            name:"zx"
+          }
         }
       },
-      computed: {
-        fullName() {
-          console.log("run");
-          return this.firstName + this.lastName
-        }
-      }
     })
     setTimeout(() => {
-      vm.firstName = "xin"
+      let obj = {}
+      // Vue.$set(vm.list,2,99)
+      Vue.$set(vm.user,'age','xm')
     }, 2000)
 
   </script>

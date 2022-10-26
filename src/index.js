@@ -5,6 +5,8 @@ import { nextTick } from './utils/next-tick'
 import { compileToFunction } from './compile/index'
 import { createElm, patch } from './vdom/patch'
 import { initWatch } from './utils/watch'
+import { set } from './observe/index'
+import { initUse } from './global-api/use'
 
 function Vue(options) {
   this.__init(options)
@@ -14,7 +16,9 @@ initMixin(Vue)
 renderMixin(Vue)
 initGlobalAPI(Vue)
 initWatch(Vue)
+initUse(Vue)
 Vue.prototype.$nextTick = nextTick
+Vue.$set = set
 export default Vue
 
 /*

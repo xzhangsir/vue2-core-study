@@ -88,3 +88,14 @@ export function isReservedTag(tagName) {
   })
   return obj[tagName]
 }
+
+// 伪数组转真数组
+export function toArray(list, start) {
+  start = start || 0
+  let i = list.length - start
+  const res = new Array(i)
+  while (i--) {
+    res[i] = list[i + start]
+  }
+  return res
+}

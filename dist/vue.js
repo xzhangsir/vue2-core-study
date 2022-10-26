@@ -182,6 +182,17 @@
     return obj[tagName];
   }
 
+  // 伪数组转真数组
+  function toArray(list, start) {
+    start = start || 0;
+    var i = list.length - start;
+    var res = new Array(i);
+    while (i--) {
+      res[i] = list[i + start];
+    }
+    return res;
+  }
+
   function initGlobalAPI(Vue) {
     // 全局属性：Vue.options
     // 功能：存放 mixin, component, filte, directive 属性
@@ -556,6 +567,29 @@
   //       this.deps.push(dep) //watcher记住dep
   //       dep.addSub(wathcer) //dep 记住 watcher
   //           this.subs.push(watcher)
+
+  function set(target, key, value) {
+    if (Array.isArray(target)) {
+      target.length = Math.max(target.length, key);
+      target.splice(key, 1, value);
+      return value;
+    }
+    // 如果是对象本身的属性 则直接添加
+    if (key in target && !(key in Object.prototype)) {
+      target[key] = value;
+      return value;
+    }
+    var ob = target.__ob__;
+    console.log(target);
+    // 如果对象本身就不是响应式 不需要将其定义成响应式属性
+    if (!ob) {
+      target[key] = value;
+      return value;
+    }
+    defineReactive(target, key, value);
+    ob.dep.notify();
+    return value;
+  }
 
   var callBacks = [];
   var pending = false;
@@ -1185,6 +1219,29 @@
     };
   }
 
+  function initUse(Vue) {
+    Vue.use = function (plugin) {
+      var installedPlugins = this._installedPlugins || (this._installedPlugins = []);
+      if (installedPlugins.indexOf(plugin) > -1) {
+        // 如果这个插件安装过 就直接返回
+        return this;
+      }
+      // 伪数组转真数组
+      var args = toArray(arguments, 1);
+      args.unshift(this); //在参数中添加vue的构造函数
+      // 把自身 Vue 传到插件的 install 方法 这样可以避免第三方插件强依赖 Vue
+      if (typeof plugin.install === 'function') {
+        plugin.install.apply(plugin, args); //执行install方法
+      } else if (typeof plugin === 'function') {
+        plugin.apply(null, args); //没有install方法直接把传入的插件执行
+      }
+
+      // 记录安装的插件
+      installedPlugins.push(plugin);
+      return this;
+    };
+  }
+
   function Vue(options) {
     this.__init(options);
   }
@@ -1192,7 +1249,9 @@
   renderMixin(Vue);
   initGlobalAPI(Vue);
   initWatch(Vue);
+  initUse(Vue);
   Vue.prototype.$nextTick = nextTick;
+  Vue.$set = set;
 
   /*
   window.onload = function () {

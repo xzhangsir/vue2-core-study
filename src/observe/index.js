@@ -85,3 +85,26 @@ function defineReactive(data, key, value) {
 //       this.deps.push(dep) //watcher记住dep
 //       dep.addSub(wathcer) //dep 记住 watcher
 //           this.subs.push(watcher)
+
+export function set(target, key, value) {
+  if (Array.isArray(target)) {
+    target.length = Math.max(target.length, key)
+    target.splice(key, 1, value)
+    return value
+  }
+  // 如果是对象本身的属性 则直接添加
+  if (key in target && !(key in Object.prototype)) {
+    target[key] = value
+    return value
+  }
+  const ob = target.__ob__
+  console.log(target)
+  // 如果对象本身就不是响应式 不需要将其定义成响应式属性
+  if (!ob) {
+    target[key] = value
+    return value
+  }
+  defineReactive(target, key, value)
+  ob.dep.notify()
+  return value
+}
