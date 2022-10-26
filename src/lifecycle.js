@@ -24,7 +24,15 @@ export function renderMixin(Vue) {
   }
 
   Vue.prototype._update = function (vnode) {
-    this.$el = patch(this.$el, vnode)
+    // this.$el = patch(this.$el, vnode)
+    let vm = this
+    const prevVnode = vm._vnode
+    vm._vnode = vnode
+    if (!prevVnode) {
+      vm.$el = patch(vm.$el, vnode)
+    } else {
+      vm.$el = patch(prevVnode, vnode)
+    }
   }
   Vue.prototype._render = function () {
     const vm = this

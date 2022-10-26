@@ -136,7 +136,7 @@
     Vue.options = {};
     Vue.mixin = function (options) {
       this.options = mergeOptions(this.options, options);
-      console.log(this.options);
+      // console.log(this.options)
       return this;
     };
   }
@@ -657,12 +657,16 @@
       text: text
     };
   }
+  function isSameVnode(vnode1, vnode2) {
+    return vnode1.tag === vnode2.tag && vnode1.key === vnode2.key;
+  }
 
   function patch(oldVnode, vnode) {
     // console.log('oldVnode', oldVnode)
     // console.log('vnode', vnode)
     // 初次渲染
     var isRealElement = oldVnode.nodeType;
+    // console.log(isRealElement)
     // 判断是不是真实元素
     if (isRealElement) {
       // 获取真实元素
@@ -673,6 +677,126 @@
       parentElm.insertBefore(newElm, elm.nexSibling);
       parentElm.removeChild(elm);
       return newElm;
+    } else {
+      // diff
+      patchVnode(oldVnode, vnode);
+    }
+  }
+  function patchVnode(oldVnode, vnode) {
+    if (!isSameVnode(oldVnode, vnode)) {
+      // 新老节点不相同 直接用新的替换掉老的
+      var _el = createElm(vnode);
+      oldVnode.el.parentNode.replaceChild(_el, oldVnode.el);
+      return _el;
+    }
+    // 旧节点是一个文本
+    if (!oldVnode.tag) {
+      if (oldVnode.text !== vnode.text) {
+        oldVnode.el.textContent = vnode.text;
+      }
+    }
+    // 不符合上面两种 代表新老标签一致 并且不是文本节点
+    // 为了节点复用 所以直接把旧的虚拟dom对应的真实dom赋值给新的虚拟dom的el属性
+    var el = vnode.el = oldVnode.el;
+    // 更新属性
+    updateProperties(el, oldVnode.data, vnode.data);
+    // 比较子节点
+    var oldChildren = oldVnode.children || [];
+    var newChildren = vnode.children || [];
+    if (oldChildren.length > 0 && newChildren.length > 0) {
+      // diff核心
+      // 新老都存在子节点
+      updateChildren(el, oldChildren, newChildren);
+    } else if (newChildren.length > 0) {
+      // 老的没有儿子  新的有儿子  创建新的儿子
+      for (var i = 0; i < newChildren.length; i++) {
+        var child = newChildren[i];
+        el.appendChild(createElm(child));
+      }
+    } else if (oldChildren.length > 0) {
+      el.innerHTML = '';
+    }
+    return el;
+  }
+  function updateChildren(el, oldChildren, newChildren) {
+    var oldStartIndex = 0;
+    var newStartIndex = 0;
+    var oldEndIndex = oldChildren.length - 1;
+    var newEndIndex = newChildren.length - 1;
+    var oldStartVnode = oldChildren[0];
+    var newStartVnode = newChildren[0];
+    var oldEndVnode = oldChildren[oldEndIndex];
+    var newEndVnode = newChildren[newEndIndex];
+    // 根据key来创建老的儿子的index映射表  类似 {'a':0,'b':1} 代表key为'a'的节点在第一个位置 key为'b'的节点在第二个位置
+    function makeIndexByKey(children) {
+      var map = {};
+      children.forEach(function (item, index) {
+        map[item.key] = index;
+      });
+      return map;
+    }
+    // 根据旧的节点生成 key和index的映射表 用于乱序比对
+    var map = makeIndexByKey(oldChildren);
+    // 只有当新老儿子的双指标的起始位置不大于结束位置的时候  才能循环 一方停止了就需要结束循环
+    while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+      // 因为乱序对比过程把移动的vnode置为 undefined 如果不存在vnode节点 直接跳过
+      if (!oldStartVnode) {
+        oldStartVnode = oldChildren[++oldStartIndex];
+      } else if (!oldEndVnode) {
+        oldEndVnode = oldChildren[--oldEndIndex];
+      } else if (isSameVnode(oldStartVnode, newStartVnode)) {
+        // 头头比较
+        // 递归比较儿子及儿子的子节点
+        patch(oldStartVnode, newStartVnode);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else if (isSameVnode(oldEndVnode, newEndVnode)) {
+        // 尾尾比较
+        patch(oldEndVnode, newEndVnode);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      } else if (isSameVnode(oldStartVnode, newEndVnode)) {
+        // 交叉比对 老的头和新的尾比较  abcd=>
+        //                            dcba
+        patch(oldStartVnode, newEndVnode);
+        el.insertBefore(oldStartVnode.el, oldEndVnode.el.nexSibling);
+        oldStartVnode = oldChildren[++oldStartIndex];
+        newEndVnode = newChildren[--newEndIndex];
+      } else if (isSameVnode(oldEndVnode, newStartVnode)) {
+        // 交叉比对 旧的尾和新的头比较  abcd =>
+        //                            dcba
+        patch(oldEndVnode, newStartVnode);
+        el.insertBefore(oldEndVnode.el, oldStartVnode.el);
+        oldEndVnode = oldChildren[--oldEndIndex];
+        newStartVnode = newChildren[++newStartIndex];
+      } else {
+        var moveIndex = map[newStartVnode.key];
+        if (moveIndex !== undefined) {
+          var moveVnode = oldChildren[moveIndex];
+          oldChildren[moveIndex] = undefined;
+          el.insertBefore(moveVnode.el, oldStartVnode.el);
+          patch(moveVnode, oldStartVnode);
+        } else {
+          el.insertBefore(createElm(newStartVnode), oldStartVnode.el);
+        }
+        newStartVnode = newChildren[++newStartIndex];
+      }
+    }
+    // 如果老节点循环完毕了 但是新节点还有  证明  新节点需要被添加到头部或者尾部
+    if (newStartIndex <= newEndIndex) {
+      for (var i = newStartIndex; i <= newEndIndex; i++) {
+        var childEl = createElm(newChildren[i]);
+        var anchor = newChildren[newEndIndex + 1] ? newChildren[newEndIndex + 1].el : null;
+        //anchor为null的时候 等同于appendChild
+        el.insertBefore(childEl, anchor);
+      }
+    }
+    // 如果新节点循环完毕 老节点还有  证明老的节点需要直接被删除
+    if (oldStartIndex <= oldEndIndex) {
+      for (var _i = oldStartIndex; _i <= oldEndIndex; _i++) {
+        var _childEl = oldChildren[_i].el;
+        el.removeChild(_childEl);
+      }
     }
   }
   function createElm(vnode) {
@@ -684,7 +808,7 @@
     if (typeof tag === 'string') {
       vnode.el = document.createElement(tag); // 创建元素的真实节点
       // 处理 data 属性
-      updateProperties(vnode.el, data);
+      updateProperties(vnode.el, {}, data);
       // 继续处理元素的儿子：递归创建真实节点并添加到对应的父亲上
       children.forEach(function (child) {
         // 若不存在儿子，children为空数组，循环终止
@@ -697,14 +821,27 @@
     return vnode.el;
   }
   function updateProperties(el) {
-    var props = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-    for (var key in props) {
-      if (key === 'style') {
+    var oldProps = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var props = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var oldStyles = oldProps.style || {};
+    var newStyles = props.style || {};
+    for (var key in oldStyles) {
+      if (!newStyles[key]) {
+        el.style[key] = '';
+      }
+    }
+    for (var _key in oldProps) {
+      if (!props[_key]) {
+        el.removeAttribute(_key);
+      }
+    }
+    for (var _key2 in props) {
+      if (_key2 === 'style') {
         for (var styleName in props.style) {
           el.style[styleName] = props.style[styleName];
         }
       } else {
-        el.setAttribute(key, props[key]);
+        el.setAttribute(_key2, props[_key2]);
       }
     }
   }
@@ -729,7 +866,15 @@
       }
     };
     Vue.prototype._update = function (vnode) {
-      this.$el = patch(this.$el, vnode);
+      // this.$el = patch(this.$el, vnode)
+      var vm = this;
+      var prevVnode = vm._vnode;
+      vm._vnode = vnode;
+      if (!prevVnode) {
+        vm.$el = patch(vm.$el, vnode);
+      } else {
+        vm.$el = patch(prevVnode, vnode);
+      }
     };
     Vue.prototype._render = function () {
       var vm = this;
@@ -762,7 +907,7 @@
       // vm.$options = options
       // 此时需使用 options 与 mixin 合并后的全局 options 再进行一次合并
       vm.$options = mergeOptions(vm.constructor.options, options);
-      console.log(vm.$options);
+      // console.log(vm.$options)
       callHook(vm, 'beforeCreate');
       initState(vm);
       callHook(vm, 'created');
@@ -794,6 +939,35 @@
   renderMixin(Vue);
   initGlobalAPI(Vue);
   Vue.prototype.$nextTick = nextTick;
+
+  /*
+  window.onload = function () {
+    let render1 = compileToFunction(`
+    <ul style = "color:red">
+      <li key = 'a'>a</li>
+      <li key="b">b</li>
+      <li key="c">c</li>
+    </ul>`)
+    let vm1 = new Vue({ data: { name: 'zx' } })
+    let prevVnode = render1.call(vm1)
+    let el = createElm(prevVnode)
+    document.body.appendChild(el)
+
+    let render2 = compileToFunction(`
+    <ul  style = "color:red">
+      <li key="a">a</li>
+      <li key="b">b</li>
+      <li key="c">c</li>
+      <li key="d">d</li>
+    </ul>`)
+    let vm2 = new Vue({ data: { name: 'xm' } })
+    let nextVnode = render2.call(vm2)
+
+    setTimeout(() => {
+      patch(prevVnode, nextVnode)
+    }, 1000)
+  }
+  */
 
   return Vue;
 
