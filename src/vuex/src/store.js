@@ -23,9 +23,23 @@ export class Store {
       },
       computed
     })
+    this.mutations = {}
+    this.actions = {}
+    foreach(options.mutations, (key, val) => {
+      this.mutations[key] = (payload) => val.call(this, this.state, payload)
+    })
+    foreach(options.actions, (key, val) => {
+      this.actions[key] = (payload) => val.call(this, this, payload)
+    })
   }
   get state() {
     return this._vm.state
+  }
+  commit = (type, payload) => {
+    this.mutations[type](payload)
+  }
+  dispatch = (type, payload) => {
+    this.actions[type](payload)
   }
 }
 // 实现store放到每一个使用的组件中

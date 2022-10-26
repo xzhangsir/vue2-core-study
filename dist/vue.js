@@ -1262,6 +1262,12 @@
     function Store(options) {
       var _this = this;
       _classCallCheck(this, Store);
+      _defineProperty(this, "commit", function (type, payload) {
+        _this.mutations[type](payload);
+      });
+      _defineProperty(this, "dispatch", function (type, payload) {
+        _this.actions[type](payload);
+      });
       // console.log(options)
       this.getters = {};
       var computed = {};
@@ -1281,6 +1287,18 @@
           state: options.state
         },
         computed: computed
+      });
+      this.mutations = {};
+      this.actions = {};
+      foreach(options.mutations, function (key, val) {
+        _this.mutations[key] = function (payload) {
+          return val.call(_this, _this.state, payload);
+        };
+      });
+      foreach(options.actions, function (key, val) {
+        _this.actions[key] = function (payload) {
+          return val.call(_this, _this, payload);
+        };
       });
     }
     _createClass(Store, [{
