@@ -768,6 +768,9 @@
     if (options.computed) {
       initComputed(vm);
     }
+    if (options.methods) {
+      initMethods(vm);
+    }
   }
   function initWatch$1(vm) {
     var watch = vm.$options.watch;
@@ -859,6 +862,12 @@
         return vm[source][key] = newVal;
       }
     });
+  }
+  function initMethods(vm) {
+    var methods = vm.$options.methods;
+    for (var key in methods) {
+      vm[key] = typeof methods[key] !== 'function' ? function () {} : methods[key].bind(vm);
+    }
   }
 
   function createElementVNode(vm, tag, data) {
@@ -1242,6 +1251,72 @@
     };
   }
 
+  function foreach(obj, cb) {
+    Object.keys(obj).forEach(function (key) {
+      cb(key, obj[key]);
+    });
+  }
+
+  var Vue$1;
+  var Store = /*#__PURE__*/function () {
+    function Store(options) {
+      var _this = this;
+      _classCallCheck(this, Store);
+      // console.log(options)
+      this.getters = {};
+      var computed = {};
+      foreach(options.getters, function (key, val) {
+        computed[key] = function () {
+          return val.call(_this, _this.state);
+        };
+        Object.defineProperty(_this.getters, key, {
+          get: function get() {
+            console.log(_this);
+            return _this._vm[key];
+          }
+        });
+      });
+      this._vm = new Vue$1({
+        data: {
+          state: options.state
+        },
+        computed: computed
+      });
+    }
+    _createClass(Store, [{
+      key: "state",
+      get: function get() {
+        return this._vm.state;
+      }
+    }]);
+    return Store;
+  }();
+  // 实现store放到每一个使用的组件中
+  function install(_Vue) {
+    // Vue 已经存在并且相等，说明已经Vuex.use过
+    if (Vue$1 && Vue$1._Vue === Vue$1) {
+      return false;
+    }
+    Vue$1 = _Vue;
+    Vue$1.mixin({
+      beforeCreate: function beforeCreate() {
+        var options = this.$options;
+        if (options.store) {
+          // 根实例
+          this.$store = options.store;
+        } else {
+          // 其他
+          this.$store = this.$parent && this.$parent.$store;
+        }
+      }
+    });
+  }
+
+  var Vuex = {
+    Store: Store,
+    install: install
+  };
+
   function Vue(options) {
     this.__init(options);
   }
@@ -1252,6 +1327,8 @@
   initUse(Vue);
   Vue.prototype.$nextTick = nextTick;
   Vue.$set = set;
+  Vue.use(Vuex);
+  Vue._Vuex = Vuex;
 
   /*
   window.onload = function () {

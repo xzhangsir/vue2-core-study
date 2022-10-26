@@ -7,6 +7,7 @@ import { createElm, patch } from './vdom/patch'
 import { initWatch } from './utils/watch'
 import { set } from './observe/index'
 import { initUse } from './global-api/use'
+import Vuex from './vuex/index'
 
 function Vue(options) {
   this.__init(options)
@@ -19,7 +20,10 @@ initWatch(Vue)
 initUse(Vue)
 Vue.prototype.$nextTick = nextTick
 Vue.$set = set
+Vue.use(Vuex)
 export default Vue
+
+Vue._Vuex = Vuex
 
 /*
 window.onload = function () {

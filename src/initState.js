@@ -14,6 +14,9 @@ export function initState(vm) {
   if (options.computed) {
     initComputed(vm)
   }
+  if (options.methods) {
+    initMethods(vm)
+  }
 }
 
 function initWatch(vm) {
@@ -107,4 +110,12 @@ function proxy(vm, source, key) {
       return (vm[source][key] = newVal)
     }
   })
+}
+
+function initMethods(vm) {
+  let methods = vm.$options.methods
+  for (let key in methods) {
+    vm[key] =
+      typeof methods[key] !== 'function' ? () => {} : methods[key].bind(vm)
+  }
 }

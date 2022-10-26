@@ -10,25 +10,55 @@
 </head>
 
 <body>
-  <div id="app">{{list}}{{user.name}}{{user.age}}</div>
+  <div id="app">
+    <div>vueData:{{name}}</div>
+    <div>vuex:{{$store.state.name}}</div>
+    <button id="button">点我</button>
+    <div>age:{{$store.state.age}}</div>
+    <div>changeAge:{{$store.getters.changeAge}}</div>
+    <div>changeAge:{{$store.getters.changeAge}}</div>
+  </div>
   <script>
 
     let vm = new Vue({
       el: "#app",
+      store: new Vue._Vuex.Store({
+        state: {
+          name: "zx",
+          age: 12
+        },
+        getters: {
+          // 相当于vue的计算属性
+          changeAge(state) {
+            console.log("我是getters的changeAge")
+            return +state.age + 5
+          }
+        },
+        actions: {},
+        mutations: {},
+      }),
       data() {
         return {
-          list:[1,2,3],
-          user:{
-            name:"zx"
-          }
+          name: "xin"
         }
       },
+      methods: {
+        changeName() {
+          this.$store.state.name = 'xm'
+          this.name = "meng"
+        }
+      }
     })
-    setTimeout(() => {
-      let obj = {}
-      // Vue.$set(vm.list,2,99)
-      Vue.$set(vm.user,'age','xm')
-    }, 2000)
+    // button.addEventListener("click", function () {
+    //   console.log(vm)
+    //   vm.$store.state.name = "xm"
+    //   vm.$store.state.age += 1
+    // })
+      button.addEventListener("click", vm.changeName)
+
+
+
+
 
   </script>
 </body>
