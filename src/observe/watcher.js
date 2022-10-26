@@ -1,3 +1,4 @@
+import { isObject } from '../utils/index'
 import Dep, { popTarget, pushTarget } from './dep'
 import { queueWatcher } from './scheduler'
 
@@ -12,17 +13,29 @@ class Watcher {
     this.options = options
     this.deps = []
     this.depsId = new Set()
+    this.user = options.user
     if (typeof exprOrFn === 'function') {
       this.getter = exprOrFn
+    } else if (typeof exprOrFn === 'string') {
+      //用户watcher传过来的可能是一个字符串   类似a.a.a.a.b
+      this.getter = function () {
+        let path = exprOrFn.split('.')
+        let obj = vm
+        for (let i = 0; i < path.length; i++) {
+          obj = obj[path[i]]
+        }
+        return obj
+      }
     }
-    this.get()
+    this.value = this.get()
   }
   get() {
     // Dep.target = this
     pushTarget(this)
-    this.getter()
+    let res = this.getter()
     // Dep.target = null
     popTarget()
+    return res
   }
   addDep(dep) {
     let id = dep.id
@@ -42,7 +55,17 @@ class Watcher {
   }
   run() {
     console.log('更新')
-    this.get()
+    // this.get()
+    let oldVal = this.value
+    let newVal = this.get()
+    this.value = newVal
+    if (this.user) {
+      if (newVal !== oldVal || isObject(newVal)) {
+        this.cb.call(this.vm, newVal, oldVal)
+      }
+    } else {
+      this.get()
+    }
   }
 }
 export default Watcher

@@ -4,6 +4,27 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      enumerableOnly && (symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      })), keys.push.apply(keys, symbols);
+    }
+    return keys;
+  }
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = null != arguments[i] ? arguments[i] : {};
+      i % 2 ? ownKeys(Object(source), !0).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
+    return target;
+  }
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -34,6 +55,19 @@
       writable: false
     });
     return Constructor;
+  }
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+    return obj;
   }
   function _slicedToArray(arr, i) {
     return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
@@ -528,6 +562,37 @@
     if (options.data) {
       initData(vm);
     }
+    if (options.watch) {
+      initWatch$1(vm);
+    }
+  }
+  function initWatch$1(vm) {
+    var watch = vm.$options.watch;
+    var _loop = function _loop(k) {
+      var handler = watch[k];
+      if (Array.isArray(handler)) {
+        handler.forEach(function (handle) {
+          createWatcher(vm, k, handle);
+        });
+      } else {
+        createWatcher(vm, k, handler);
+      }
+    };
+    for (var k in watch) {
+      _loop(k);
+    }
+  }
+  function createWatcher(vm, exprOrFn, handler) {
+    var options = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+    if (isObject(handler)) {
+      options = handler; //保存用户传入的对象
+      handler = handler.handler; //这个代表真正用户传入的函数
+    }
+
+    if (typeof handler === 'string') {
+      handler = vm[handler];
+    }
+    return vm.$watch(exprOrFn, handler, options);
   }
   function initData(vm) {
     var data = vm.$options.data;
@@ -633,19 +698,31 @@
       this.options = options;
       this.deps = [];
       this.depsId = new Set();
+      this.user = options.user;
       if (typeof exprOrFn === 'function') {
         this.getter = exprOrFn;
+      } else if (typeof exprOrFn === 'string') {
+        //用户watcher传过来的可能是一个字符串   类似a.a.a.a.b
+        this.getter = function () {
+          var path = exprOrFn.split('.');
+          var obj = vm;
+          for (var i = 0; i < path.length; i++) {
+            obj = obj[path[i]];
+          }
+          return obj;
+        };
       }
-      this.get();
+      this.value = this.get();
     }
     _createClass(Watcher, [{
       key: "get",
       value: function get() {
         // Dep.target = this
         pushTarget(this);
-        this.getter();
+        var res = this.getter();
         // Dep.target = null
         popTarget();
+        return res;
       }
     }, {
       key: "addDep",
@@ -671,7 +748,17 @@
       key: "run",
       value: function run() {
         console.log('更新');
-        this.get();
+        // this.get()
+        var oldVal = this.value;
+        var newVal = this.get();
+        this.value = newVal;
+        if (this.user) {
+          if (newVal !== oldVal || isObject(newVal)) {
+            this.cb.call(this.vm, newVal, oldVal);
+          }
+        } else {
+          this.get();
+        }
       }
     }]);
     return Watcher;
@@ -1022,12 +1109,26 @@
     };
   }
 
+  function initWatch(Vue) {
+    Vue.prototype.$watch = function (exprOrFn, cb, options) {
+      var vm = this;
+      new Watcher(vm, exprOrFn, cb, _objectSpread2(_objectSpread2({}, options), {}, {
+        user: true
+      }));
+      // 如果有immediate属性 代表需要立即执行回调
+      if (options && options.immediate) {
+        cb(); //如果立刻执行
+      }
+    };
+  }
+
   function Vue(options) {
     this.__init(options);
   }
   initMixin(Vue);
   renderMixin(Vue);
   initGlobalAPI(Vue);
+  initWatch(Vue);
   Vue.prototype.$nextTick = nextTick;
 
   /*
