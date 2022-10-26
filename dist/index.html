@@ -10,12 +10,37 @@
 <body>
   <div id="app"></div>
   <script>
+     // 全局组件
+      Vue.component("parent1-component", Vue.extend({
+        template: `<div>我是全局组件</div>`,
+      }))
+      Vue.component("parent2-component", {
+        template: `<div>俺也是全局组件{{name}}</div>`,
+        data(){
+          return{
+            name:"xm"
+          }
+        }
+      })
       let vm = new Vue({
               el: "#app",
               data() {
                 return {
+                  name:'zx'
                 }
               },
+              template: `<div id="a">
+                hello 这是我自己的{{name}}
+                <parent1-component></parent1-component>
+                <parent2-component></parent2-component>
+                <my-button></my-button>
+                </div>`,
+               // 局部组件
+              components: {
+                'my-button': {
+                  template: '<button>Hello Vue 局部组件</button>'
+                }
+              }
             })
   </script>
 </body>

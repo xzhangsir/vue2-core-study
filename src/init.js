@@ -8,6 +8,7 @@ export function initMixin(Vue) {
     let vm = this
     // vm.$options = options
     // 此时需使用 options 与 mixin 合并后的全局 options 再进行一次合并
+    // console.log(vm.constructor.options, options)
     vm.$options = mergeOptions(vm.constructor.options, options)
     // console.log(vm.$options)
     callHook(vm, 'beforeCreate')

@@ -108,6 +108,15 @@
       }
     };
   });
+  strats.components = function (parentVal, childVal) {
+    var res = Object.create(parentVal);
+    if (childVal) {
+      for (var k in childVal) {
+        res[k] = childVal[k];
+      }
+    }
+    return res;
+  };
   function mergeOptions(parentVal, childVal) {
     // console.log(parentVal, childVal)
     var options = {};
@@ -129,15 +138,46 @@
     }
     return options;
   }
+  function isReservedTag(tagName) {
+    // 定义常见标签
+    var str = 'html,body,base,head,link,meta,style,title,' + 'address,article,aside,footer,header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,' + 'div,dd,dl,dt,figcaption,figure,picture,hr,img,li,main,ol,p,pre,ul,' + 'a,b,abbr,bdi,bdo,br,cite,code,data,dfn,em,i,kbd,mark,q,rp,rt,rtc,ruby,' + 's,samp,small,span,strong,sub,sup,time,u,var,wbr,area,audio,map,track,video,' + 'embed,object,param,source,canvas,script,noscript,del,ins,' + 'caption,col,colgroup,table,thead,tbody,td,th,tr,' + 'button,datalist,fieldset,form,input,label,legend,meter,optgroup,option,' + 'output,progress,select,textarea,' + 'details,dialog,menu,menuitem,summary,' + 'content,element,shadow,template,blockquote,iframe,tfoot';
+    var obj = {};
+    str.split(',').forEach(function (tag) {
+      obj[tag] = true;
+    });
+    return obj[tagName];
+  }
 
   function initGlobalAPI(Vue) {
     // 全局属性：Vue.options
     // 功能：存放 mixin, component, filte, directive 属性
-    Vue.options = {};
+    Vue.options = {
+      _base: Vue
+    };
+    Vue.options.components = {};
     Vue.mixin = function (options) {
       this.options = mergeOptions(this.options, options);
       // console.log(this.options)
       return this;
+    };
+    var cid = 0;
+    Vue.extend = function (options) {
+      var Super = this;
+      var Sub = function Sub(options) {
+        this.__init(options);
+      };
+      Sub.cid = cid++;
+      Sub.prototype = Object.create(Super.prototype);
+      // Object.create 会产生一个新的实例作为子类的原型，导致constructor指向错误
+      Sub.prototype.constructor = Sub;
+      Sub.options = mergeOptions(this.options, options);
+      return Sub;
+    };
+    Vue.component = function (id, definition) {
+      if (typeof definition !== 'function') {
+        definition = Vue.extend(definition);
+      }
+      Vue.options.components[id] = definition;
     };
   }
 
@@ -642,19 +682,46 @@
     for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
       children[_key - 3] = arguments[_key];
     }
-    return vnode(vm, tag, data.key, data, children, undefined);
+    if (isReservedTag(tag)) {
+      return vnode(vm, tag, data.key, data, children, undefined);
+    } else {
+      var Ctor = vm.$options.components[tag];
+      return createComponentVNode(vm, tag, data, data.key, children, Ctor);
+    }
+  }
+  function createComponentVNode(vm, tag, data, key, children, Ctor) {
+    // 局部组件定义不会被Vue.extend处理成为组件
+    if (isObject(Ctor)) {
+      // 处理局部组件
+      Ctor = vm.$options._base.extend(Ctor);
+    }
+    data.hook = {
+      init: function init(vnode) {
+        //稍后创建真实节点的时候 如果是组件则调用此方法
+        var child = vnode.componentInstance = new Ctor({
+          _isComponent: true
+        }); //实例化组件
+        child.$mount(); //因为没有传入el属性  需要手动挂载 为了在组件实例上面增加$el方法可用于生成组件的真实渲染节点
+      }
+    };
+
+    return vnode(vm, tag, key, data, children, null, {
+      Ctor: Ctor
+    });
   }
   function createTextVNode(vm, text) {
     return vnode(vm, undefined, undefined, undefined, undefined, text);
   }
   function vnode(vm, tag, key, data, children, text) {
+    var componentOptions = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : {};
     return {
       vm: vm,
       tag: tag,
       key: key,
       data: data,
       children: children,
-      text: text
+      text: text,
+      componentOptions: componentOptions
     };
   }
   function isSameVnode(vnode1, vnode2) {
@@ -662,6 +729,10 @@
   }
 
   function patch(oldVnode, vnode) {
+    if (!oldVnode) {
+      // 组件的创建过程是没有el属性的
+      return createElm(vnode);
+    }
     // console.log('oldVnode', oldVnode)
     // console.log('vnode', vnode)
     // 初次渲染
@@ -799,6 +870,20 @@
       }
     }
   }
+  // 判断是不是组件
+  function createComponent(vnode) {
+    // 初始化组件
+    // 创建组件实例
+    var i = vnode.data;
+    // 调用组件data.hook.init方法进行组件初始化过程 最终组件的vnode.componentInstance.$el就是组件渲染好的真实dom
+    if ((i = i.hook) && (i = i.init)) {
+      i(vnode);
+    }
+    // 如果组件实例化完毕有componentInstance属性 那证明是组件
+    if (vnode.componentInstance) {
+      return true;
+    }
+  }
   function createElm(vnode) {
     var tag = vnode.tag,
       data = vnode.data,
@@ -806,6 +891,10 @@
       text = vnode.text;
     // 通过 tag 判断当前节点是元素 or 文本,判断逻辑：文本 tag 是 undefined
     if (typeof tag === 'string') {
+      if (createComponent(vnode)) {
+        // 如果是组件 返回真实组件渲染的真实dom
+        return vnode.componentInstance.$el;
+      }
       vnode.el = document.createElement(tag); // 创建元素的真实节点
       // 处理 data 属性
       updateProperties(vnode.el, {}, data);
@@ -906,6 +995,7 @@
       var vm = this;
       // vm.$options = options
       // 此时需使用 options 与 mixin 合并后的全局 options 再进行一次合并
+      // console.log(vm.constructor.options, options)
       vm.$options = mergeOptions(vm.constructor.options, options);
       // console.log(vm.$options)
       callHook(vm, 'beforeCreate');
