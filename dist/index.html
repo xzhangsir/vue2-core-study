@@ -18,6 +18,18 @@
   </div>
   <script>
 
+    function persists() {
+        return function (store) {
+          // 取出本地存储的状态
+          let data = localStorage.getItem('VUEX:STATE');
+          if (data) {
+            store.replaceState(JSON.parse(data));
+          }
+          store.subscribe((mutation, state) => {
+            localStorage.setItem('VUEX:STATE', JSON.stringify(state));
+          })
+        }
+      }
     let vm = new Vue({
       el: "#app",
       store: new Vue._Vuex.Store({
@@ -59,13 +71,15 @@
               }
             }
           }
-        }
+        },
+        plugins: [
+          persists()
+        ],
       }),
       data() {
         return {
         }
       },
-
     })
 
     button.addEventListener("click", () => {
@@ -99,6 +113,8 @@
       state: '根模块的状态'
     } 
     */
+
+    
 
 
 

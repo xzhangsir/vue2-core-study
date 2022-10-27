@@ -1380,16 +1380,30 @@
       this._mutations = {};
       this._getters = {};
       this._modules = new ModuleCollection(options);
-      console.log(this._modules);
+      // console.log(this._modules)
+      this._subscribes = [];
       // 模块安装
       installModule(this, state, [], this._modules.root);
       //将 state 状态、getters 定义在当前的 vm 实例上
       resetStoreVM(this, state);
+      options.plugins.forEach(function (plugin) {
+        return plugin(_this);
+      });
     }
     _createClass(Store, [{
       key: "state",
       get: function get() {
         return this._vm.state;
+      }
+    }, {
+      key: "subscribe",
+      value: function subscribe(fn) {
+        this._subscribes.push(fn);
+      }
+    }, {
+      key: "replaceState",
+      value: function replaceState(state) {
+        this._vm._data.state = state;
       }
     }]);
     return Store;
@@ -1409,7 +1423,11 @@
       // console.log(mutation, key, namespace)
       store._mutations[namespace + key] = store._mutations[namespace + key] || [];
       store._mutations[namespace + key].push(function (payload) {
-        mutation.call(store, module.state, payload);
+        mutation.call(store, getState(store, path), payload);
+        store._subscribes.forEach(function (fn) {
+          console.log(fn);
+          fn(mutation, store.state);
+        });
       });
     });
     // 遍历 action
@@ -1422,13 +1440,19 @@
     // 遍历 getter
     module.forEachGetter(function (getter, key) {
       store._getters[namespace + key] = function () {
-        return getter(module.state);
+        return getter(getState(store, path));
       };
     });
     module.forEachChild(function (child, key) {
       installModule(store, rootState, path.concat(key), child);
     });
   }
+  function getState(store, path) {
+    return path.reduce(function (newState, current) {
+      return newState[current];
+    }, store.state); // replaceState 后的最新状态
+  }
+
   function resetStoreVM(store, state) {
     var computed = {};
     store.getters = {};
