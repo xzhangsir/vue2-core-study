@@ -1257,49 +1257,134 @@
     });
   }
 
+  var Module = /*#__PURE__*/function () {
+    function Module(newModule) {
+      _classCallCheck(this, Module);
+      this._raw = newModule;
+      this._children = {};
+      this.state = newModule.state;
+    }
+    // 根据模块名 获取模块实例
+    _createClass(Module, [{
+      key: "getChild",
+      value: function getChild(key) {
+        return this._children[key];
+      }
+      // 向当前模块实例添加子模块
+    }, {
+      key: "addChild",
+      value: function addChild(key, module) {
+        this._children[key] = module;
+      }
+    }, {
+      key: "forEachMutation",
+      value: function forEachMutation(fn) {
+        var _this = this;
+        if (this._raw.mutations) {
+          Object.keys(this._raw.mutations).forEach(function (key) {
+            fn(_this._raw.mutations[key], key);
+          });
+        }
+      }
+    }, {
+      key: "forEachAction",
+      value: function forEachAction(fn) {
+        var _this2 = this;
+        if (this._raw.actions) {
+          Object.keys(this._raw.actions).forEach(function (key) {
+            return fn(_this2._raw.actions[key], key);
+          });
+        }
+      }
+    }, {
+      key: "forEachGetter",
+      value: function forEachGetter(fn) {
+        var _this3 = this;
+        if (this._raw.getters) {
+          Object.keys(this._raw.getters).forEach(function (key) {
+            return fn(_this3._raw.getters[key], key);
+          });
+        }
+      }
+    }, {
+      key: "forEachChild",
+      value: function forEachChild(fn) {
+        var _this4 = this;
+        Object.keys(this._children).forEach(function (key) {
+          return fn(_this4._children[key], key);
+        });
+      }
+    }]);
+    return Module;
+  }();
+
+  var ModuleCollection = /*#__PURE__*/function () {
+    function ModuleCollection(options) {
+      _classCallCheck(this, ModuleCollection);
+      this.register([], options);
+    }
+    _createClass(ModuleCollection, [{
+      key: "register",
+      value: function register(path, rootModule) {
+        var _this = this;
+        var newModule = new Module(rootModule);
+        if (path.length === 0) {
+          this.root = newModule;
+        } else {
+          var parent = path.slice(0, -1).reduce(function (memo, current) {
+            return memo._children(current);
+          }, this.root);
+          parent._children[path[path.length - 1]] = newModule;
+        }
+        // console.log(rootModule)
+        if (rootModule.modules) {
+          Object.keys(rootModule.modules).forEach(function (moduleName) {
+            var module = rootModule.modules[moduleName];
+            _this.register(path.concat(moduleName), module);
+          });
+        }
+      }
+    }, {
+      key: "getNamespaced",
+      value: function getNamespaced(path) {
+        console.log(path);
+        var root = this.root;
+        return path.reduce(function (str, key) {
+          // console.log(root, key)
+          root = root.getChild(key);
+          return str + (root._raw.namespaced ? key + '/' : '');
+        }, '');
+      }
+    }]);
+    return ModuleCollection;
+  }();
+
   var Vue$1;
   var Store = /*#__PURE__*/function () {
     function Store(options) {
       var _this = this;
       _classCallCheck(this, Store);
       _defineProperty(this, "commit", function (type, payload) {
-        _this.mutations[type](payload);
-      });
-      _defineProperty(this, "dispatch", function (type, payload) {
-        _this.actions[type](payload);
-      });
-      // console.log(options)
-      this.getters = {};
-      var computed = {};
-      foreach(options.getters, function (key, val) {
-        computed[key] = function () {
-          return val.call(_this, _this.state);
-        };
-        Object.defineProperty(_this.getters, key, {
-          get: function get() {
-            console.log(_this);
-            return _this._vm[key];
-          }
+        _this._mutations[type].forEach(function (mutation) {
+          return mutation.call(_this, payload);
         });
       });
-      this._vm = new Vue$1({
-        data: {
-          state: options.state
-        },
-        computed: computed
+      _defineProperty(this, "dispatch", function (type, payload) {
+        _this._actions[type].forEach(function (action) {
+          return action.call(_this, payload);
+        });
       });
-      this.mutations = {};
-      this.actions = {};
-      foreach(options.mutations, function (key, val) {
-        _this.mutations[key] = function (payload) {
-          return val.call(_this, _this.state, payload);
-        };
-      });
-      foreach(options.actions, function (key, val) {
-        _this.actions[key] = function (payload) {
-          return val.call(_this, _this, payload);
-        };
-      });
+      options.getters;
+        var state = options.state;
+      this._actions = {};
+      this._mutations = {};
+      this._getters = {};
+      this._modules = new ModuleCollection(options);
+      console.log(this._modules);
+      // 模块安装
+      installModule(this, state, [], this._modules.root);
+      //将 state 状态、getters 定义在当前的 vm 实例上
+      resetStoreVM(this, state);
     }
     _createClass(Store, [{
       key: "state",
@@ -1309,6 +1394,64 @@
     }]);
     return Store;
   }();
+  function installModule(store, rootState, path, module) {
+    // console.log(store, rootState, path, module)
+    var namespace = store._modules.getNamespaced(path);
+    if (path.length > 0) {
+      var parent = path.slice(0, -1).reduce(function (memo, current) {
+        return memo[current];
+      }, rootState);
+      // 支持 Vuex 动态添加模块，将新增状态直接定义成为响应式数据；
+      Vue$1.$set(parent, path[path.length - 1], module.state);
+    }
+    // 遍历 mutation
+    module.forEachMutation(function (mutation, key) {
+      // console.log(mutation, key, namespace)
+      store._mutations[namespace + key] = store._mutations[namespace + key] || [];
+      store._mutations[namespace + key].push(function (payload) {
+        mutation.call(store, module.state, payload);
+      });
+    });
+    // 遍历 action
+    module.forEachAction(function (action, key) {
+      store._actions[namespace + key] = store._actions[namespace + key] || [];
+      store._actions[namespace + key].push(function (payload) {
+        action.call(store, store, payload);
+      });
+    });
+    // 遍历 getter
+    module.forEachGetter(function (getter, key) {
+      store._getters[namespace + key] = function () {
+        return getter(module.state);
+      };
+    });
+    module.forEachChild(function (child, key) {
+      installModule(store, rootState, path.concat(key), child);
+    });
+  }
+  function resetStoreVM(store, state) {
+    var computed = {};
+    store.getters = {};
+    foreach(store._getters, function (key, fn) {
+      computed[key] = function () {
+        return fn();
+      };
+      Object.defineProperty(store.getters, key, {
+        get: function get() {
+          return store._vm[key];
+        }
+      });
+    });
+    store._vm = new Vue$1({
+      data: function data() {
+        return {
+          state: state
+        };
+      },
+      computed: computed
+    });
+  }
+
   // 实现store放到每一个使用的组件中
   function install(_Vue) {
     // Vue 已经存在并且相等，说明已经Vuex.use过
