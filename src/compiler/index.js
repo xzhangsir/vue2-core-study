@@ -9,6 +9,7 @@ export function compileToFunctions(template) {
   // console.log('code', code)
   // _c('div',{id:"a",style:{"color":"red"}},_v("hello"),_c('span',{class:"b"},_v(_s(word)+"ww"+_s(username))))
   let render = new Function(`with(this){return ${code}}`)
+  console.log('render', render)
   return render
 }
 
