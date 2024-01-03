@@ -1,3 +1,4 @@
+import Watcher from './observe/watcher'
 import { patch } from './vdom/patch'
 
 export function mountComponent(vm, el) {
@@ -8,7 +9,10 @@ export function mountComponent(vm, el) {
   // 真实的el选项赋值给实例的$el属性 为之后虚拟dom产生的新的dom替换老的dom做铺垫
   vm.$el = el
   //   _update和._render方法都是挂载在Vue原型的方法  类似_init
-  vm._update(vm._render())
+  let updateComponent = () => {
+    vm._update(vm._render())
+  }
+  new Watcher(vm, updateComponent, () => {}, true)
 }
 
 export function lifecycleMixin(Vue) {

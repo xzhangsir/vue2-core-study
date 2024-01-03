@@ -6,6 +6,7 @@ for (let i = 0; i < methods.length; i++) {
   let method = methods[i]
   ArrayMethods[method] = function (...args) {
     let res = oldArrMethods[method].apply(this, args)
+    let ob = this.__ob__
     let inserted //新增的值
     switch (method) {
       case 'push':
@@ -19,8 +20,10 @@ for (let i = 0; i < methods.length; i++) {
         break
     }
     if (inserted) {
-      this.__ob__.observerArray(inserted)
+      ob.observerArray(inserted)
     }
+    console.log('inserted', inserted)
+    ob.dep.notify()
     return res
   }
 }
