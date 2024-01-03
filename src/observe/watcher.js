@@ -1,4 +1,5 @@
 import { pushTarget, popTarget } from './dep'
+import { queueWatcher } from './scheduler'
 
 let id = 0
 export default class Watcher {
@@ -34,6 +35,10 @@ export default class Watcher {
   }
   //   这里简单的就执行以下get方法  之后涉及到计算属性就不一样了
   update() {
+    // 异步更新
+    queueWatcher(this)
+  }
+  run() {
     this.get()
   }
 }
