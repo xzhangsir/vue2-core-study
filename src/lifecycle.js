@@ -12,7 +12,16 @@ export function mountComponent(vm, el) {
   let updateComponent = () => {
     vm._update(vm._render())
   }
-  new Watcher(vm, updateComponent, () => {}, true)
+  callHook(vm, 'beforeMount')
+  new Watcher(
+    vm,
+    updateComponent,
+    () => {
+      callHook(vm, 'beforeUpdate') //更新之前
+    },
+    true
+  )
+  callHook(vm, 'mounted')
 }
 
 export function lifecycleMixin(Vue) {
@@ -21,5 +30,16 @@ export function lifecycleMixin(Vue) {
     const vm = this
     // patch是渲染vnode为真实dom核心
     vm.$el = patch(vm.$el, vnode)
+  }
+}
+
+//从$options取对应的生命周期函数数组并执行
+export function callHook(vm, hook) {
+  // 获取生命周期对应函数数组
+  let handlers = vm.$options[hook]
+  if (handlers) {
+    handlers.forEach((fn) => {
+      fn.call(vm) // 生命周期中的 this 指向 vm 实例
+    })
   }
 }

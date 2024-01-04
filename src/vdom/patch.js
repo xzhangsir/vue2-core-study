@@ -1,6 +1,6 @@
 export function patch(oldVnode, vnode) {
-  console.log('oldVnode', oldVnode)
-  console.log('vnode', vnode)
+  // console.log('oldVnode', oldVnode)
+  // console.log('vnode', vnode)
   // 判断传入的oldVnode是否是一个真实元素
   // 初次渲染 传入的vm.$el就是咱们传入的el选项  所以是真实dom
   // 如果不是初始渲染而是视图更新的时候  vm.$el就被替换成了更新之前的老的虚拟dom

@@ -22,7 +22,6 @@ for (let i = 0; i < methods.length; i++) {
     if (inserted) {
       ob.observerArray(inserted)
     }
-    console.log('inserted', inserted)
     ob.dep.notify()
     return res
   }
